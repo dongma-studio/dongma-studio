@@ -1779,14 +1779,14 @@ async function sendToLine(i) {
   toast('📤 傳送到 LINE 中...');
 
   try {
-    const res = await fetch('https://api.line.me/v2/bot/message/push', {
+    const res = await fetch('https://dongma-proxy.dongma-studio.workers.dev/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${LINE_TOKEN}`
+        'X-Target': 'line'
       },
       body: JSON.stringify({
-        to: LINE_USER,
+        to: 'U2da1c791c66a02d4dd9d04616b7a34f0',
         messages: [{
           type: 'text',
           text: `📝 貼文草稿待審核\n\n${preview}${content.length > 200 ? '...' : ''}\n\n✅ 回覆「發出」自動發文\n✏️ 回覆「修改＋你的意見」重新生成`
@@ -1794,17 +1794,17 @@ async function sendToLine(i) {
       })
     });
 
-    if (res.ok) {
+    const data = await res.json();
+    if (res.ok && !data.error) {
       toast('✅ 已推送到你的 LINE！請打開手機確認');
       go('line');
       setTimeout(()=>addLineMsg('bot',`📨 草稿已送到你的 LINE！\n\n${preview.substring(0,80)}...\n\n請在手機回覆「✅ 發出」或「✏️ 修改」`),400);
     } else {
-      const err = await res.json();
-      toast(`❌ 推送失敗：${err.message || res.status}`);
-      console.error(err);
+      toast(`❌ 推送失敗：${data.message || JSON.stringify(data)}`);
+      console.error(data);
     }
   } catch(e) {
-    toast('❌ 網路錯誤，請稍後再試');
+    toast('❌ 網路錯誤：' + e.message);
     console.error(e);
   }
 }
