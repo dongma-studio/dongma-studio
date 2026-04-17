@@ -1708,9 +1708,13 @@ A型平均年齡是62歲
       })
     });
     const d = await r.json();
+    console.log('API回傳：', JSON.stringify(d).substring(0,300));
+    if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+    if (!d.content || !Array.isArray(d.content)) throw new Error('格式異常：' + JSON.stringify(d).substring(0,200));
     const txt = d.content.map(x=>x.text||'').join('');
     const clean = txt.replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean);
+    if (!parsed.posts || !Array.isArray(parsed.posts)) throw new Error('posts 格式異常');
     hideLoad();
     renderResults(parsed.posts, t);
     parsed.posts.forEach(p=>{
@@ -1720,8 +1724,8 @@ A型平均年齡是62歲
     toast('✅ 貼文生成完成！可直接點擊文字修改');
   } catch(e) {
     hideLoad();
-    toast('❌ 生成失敗，請再試一次');
-    console.error(e);
+    toast('❌ 生成失敗：' + e.message);
+    console.error('生成錯誤：', e);
   }
   document.getElementById('genBtn').disabled=false;
   document.getElementById('quickGenBtn').disabled=false;
