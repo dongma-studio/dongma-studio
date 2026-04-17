@@ -1698,7 +1698,7 @@ A型平均年齡是62歲
 - yt: script欄位填【0-5秒鉤子】【6-40秒主內容】【41-55秒tips】【56-60秒CTA】`;
 
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch("https://dongma-proxy.dongma-studio.workers.dev/", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({
