@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>親子共好 Studio — AI Content Scheduler</title>
+<link href="https://fonts.googleapis.com/css2?family=Clash+Display:wght@400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --ink: #1A1A2E;
+  --ink2: #2D2D44;
+  --fog: #F2F0EC;
+  --fog2: #E8E5DF;
+  --white: #FDFCFA;
+  --ig: #E1306C;
+  --ig2: #F77737;
+  --threads: #000000;
+  --yt: #FF0000;
+  --yt2: #CC0000;
+  --moss: #4A7C59;
+  --moss-light: #A8C5B0;
+  --moss-pale: #EDF4EF;
+  --amber: #D4783A;
+  --amber-pale: #FBF0E8;
+  --line-g: #06C755;
+  --border: rgba(26,26,46,0.08);
+  --shadow-sm: 0 2px 8px rgba(26,26,46,0.06);
+  --shadow: 0 4px 20px rgba(26,26,46,0.10);
+  --shadow-lg: 0 12px 48px rgba(26,26,46,0.14);
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Noto Sans TC', sans-serif;
+  background: var(--fog);
+  color: var(--ink);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: 240px; min-height: 100vh;
+  background: var(--ink);
+  display: flex; flex-direction: column;
+  position: fixed; left:0; top:0; bottom:0;
+  z-index: 100;
+}
+
+.brand {
+  padding: 32px 24px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.brand-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 17px; font-weight: 800;
+  color: #fff; letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.brand-name em { color: var(--moss-light); font-style: normal; }
+.brand-sub {
+  font-size: 10px; color: rgba(255,255,255,0.35);
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-top: 5px;
+}
+
+/* time budget badge */
+.time-badge {
+  margin: 20px 24px 0;
+  background: rgba(74,124,89,0.2);
+  border: 1px solid rgba(74,124,89,0.3);
+  border-radius: 8px; padding: 10px 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.time-badge .clock { font-size: 18px; }
+.time-badge-text .label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 1.5px; text-transform: uppercase; }
+.time-badge-text .value { font-size: 13px; color: var(--moss-light); font-weight: 600; margin-top: 1px; }
+
+.nav { padding: 24px 12px; flex: 1; }
+.nav-section-label {
+  font-size: 9px; color: rgba(255,255,255,0.25);
+  letter-spacing: 2px; text-transform: uppercase;
+  padding: 0 12px 8px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  cursor: pointer; color: rgba(255,255,255,0.45);
+  font-size: 13px; font-weight: 500;
+  transition: all 0.18s;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  font-family: 'Noto Sans TC', sans-serif;
+  background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); }
+.nav-item.active {
+  color: #fff;
+  background: rgba(74,124,89,0.2);
+  border-color: rgba(74,124,89,0.3);
+}
+.nav-item .nav-icon { width: 20px; font-size: 15px; text-align: center; flex-shrink: 0; }
+
+/* platform badges in sidebar */
+.platform-pills { padding: 8px 12px 16px; }
+.platform-pill-row {
+  display: flex; gap: 6px; flex-wrap: wrap; padding: 0 12px;
+}
+.p-pill {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 4px 10px; border-radius: 20px;
+}
+.p-pill.ig { background: var(--ig); color: white; }
+.p-pill.threads { background: white; color: black; }
+.p-pill.yt { background: var(--yt); color: white; }
+
+.sidebar-footer {
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 10px;
+}
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--moss), var(--amber));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: white; flex-shrink: 0;
+}
+.user-name { font-size: 12px; color: white; font-weight: 600; }
+.user-role { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+
+/* ─── MAIN ─── */
+.main { margin-left: 240px; flex: 1; min-height: 100vh; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 36px;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.topbar-left { display: flex; flex-direction: column; }
+.topbar-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700; color: var(--ink);
+}
+.topbar-subtitle { font-size: 11px; color: rgba(26,26,46,0.4); margin-top: 1px; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.btn {
+  padding: 8px 18px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: none; transition: all 0.18s; font-family: inherit;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-moss { background: var(--moss); color: white; }
+.btn-moss:hover { background: #3d6b4a; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(74,124,89,0.35); }
+.btn-ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+.btn-ghost:hover { border-color: var(--moss); color: var(--moss); }
+.btn-line { background: var(--line-g); color: white; }
+.btn-line:hover { background: #05b34c; }
+.btn-amber { background: var(--amber); color: white; }
+.btn-amber:hover { background: #bf6b30; }
+
+/* ─── CONTENT ─── */
+.content { padding: 28px 36px; max-width: 1200px; }
+
+/* ─── PANELS ─── */
+.panel { display: none; }
+.panel.active { display: block; animation: fadeUp 0.25s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ─── WEEKLY OVERVIEW BAR ─── */
+.week-bar {
+  display: grid; grid-template-columns: repeat(7,1fr); gap: 8px;
+  margin-bottom: 24px;
+}
+.week-day {
+  background: var(--white); border-radius: 12px;
+  padding: 12px 8px; text-align: center;
+  border: 1.5px solid transparent;
+  transition: all 0.2s; cursor: default;
+}
+.week-day.today { border-color: var(--moss); background: var(--moss-pale); }
+.week-day .day-label { font-size: 10px; color: rgba(26,26,46,0.4); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.week-day .day-num { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; margin: 2px 0; }
+.week-day.today .day-num { color: var(--moss); }
+.week-day .day-dots { display: flex; gap: 3px; justify-content: center; margin-top: 4px; }
+.day-dot { width: 5px; height: 5px; border-radius: 50%; }
+.day-dot.ig { background: var(--ig); }
+.day-dot.threads { background: var(--ink2); }
+.day-dot.yt { background: var(--yt); }
+
+/* ─── TREND CARDS ─── */
+.section-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+}
+.section-meta { font-size: 11px; color: rgba(26,26,46,0.4); }
+
+.trend-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 12px;
+  margin-bottom: 24px;
+}
+.trend-card {
+  background: var(--white);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius); padding: 18px;
+  cursor: pointer; transition: all 0.22s;
+  position: relative; overflow: hidden;
+}
+.trend-card:hover { box-shadow: var(--shadow); transform: translateY(-2px); }
+.trend-card.sel { border-color: var(--moss); background: var(--moss-pale); }
+.trend-card .heat {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 10px; color: var(--amber); font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.trend-card .num {
+  font-size: 9px; color: rgba(26,26,46,0.3);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+  font-weight: 700;
+}
+.trend-card .topic { font-size: 14px; font-weight: 700; margin-bottom: 6px; line-height: 1.4; }
+.trend-card .desc { font-size: 11px; color: rgba(26,26,46,0.55); line-height: 1.6; }
+.trend-card .tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 10px; }
+.trend-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 20px;
+  background: rgba(74,124,89,0.1); color: var(--moss); font-weight: 600;
+}
+.trend-card.sel .trend-tag { background: rgba(74,124,89,0.2); }
+
+/* ─── GENERATE AREA ─── */
+.gen-area {
+  background: var(--white); border-radius: var(--radius);
+  padding: 24px; margin-bottom: 24px;
+  border: 1px solid var(--border);
+}
+.gen-area-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 700; margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.gen-area-title span { color: rgba(26,26,46,0.4); font-weight: 400; font-size: 12px; font-family: inherit; }
+
+.platform-toggles { display: flex; gap: 8px; margin-bottom: 18px; }
+.ptoggle {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 8px;
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  border: 1.5px solid; transition: all 0.18s;
+  font-family: inherit; letter-spacing: 0.3px;
+}
+.ptoggle.ig { border-color: var(--ig); color: var(--ig); background: rgba(225,48,108,0.05); }
+.ptoggle.ig.on { background: var(--ig); color: white; }
+.ptoggle.threads { border-color: rgba(0,0,0,0.15); color: var(--threads); background: rgba(0,0,0,0.03); }
+.ptoggle.threads.on { background: var(--threads); color: white; border-color: var(--threads); }
+.ptoggle.yt { border-color: var(--yt); color: var(--yt); background: rgba(255,0,0,0.05); }
+.ptoggle.yt.on { background: var(--yt); color: white; }
+
+.gen-row { display: flex; align-items: center; gap: 12px; }
+.gen-btn {
+  padding: 12px 28px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--moss), #5a9068);
+  color: white; border: none; cursor: pointer;
+  font-size: 14px; font-weight: 700;
+  font-family: 'Syne', sans-serif; letter-spacing: -0.2px;
+  display: flex; align-items: center; gap: 8px;
+  transition: all 0.2s;
+}
+.gen-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(74,124,89,0.4); }
+.gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+.gen-hint { font-size: 11px; color: rgba(26,26,46,0.4); }
+.gen-hint strong { color: var(--amber); }
+
+/* ─── RESULT CARDS ─── */
+.results { display: flex; flex-direction: column; gap: 16px; }
+
+.result-card {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden;
+  box-shadow: var(--shadow-sm); transition: box-shadow 0.2s;
+}
+.result-card:hover { box-shadow: var(--shadow); }
+
+.rc-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.rc-platform { display: flex; align-items: center; gap: 10px; }
+.platform-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.platform-icon.ig { background: linear-gradient(135deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D); }
+.platform-icon.threads { background: #000; }
+.platform-icon.yt { background: var(--yt); }
+.rc-pname { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; }
+.rc-tip {
+  font-size: 11px; color: var(--amber); font-weight: 600;
+  background: var(--amber-pale); padding: 4px 10px; border-radius: 20px;
+}
+
+.rc-body { padding: 20px; }
+.rc-content {
+  font-size: 13.5px; line-height: 1.85; color: var(--ink);
+  white-space: pre-wrap; min-height: 60px;
+  outline: none; border-radius: 8px;
+  padding: 10px; margin: -10px;
+  transition: background 0.18s;
+}
+.rc-content:focus { background: var(--fog); }
+.rc-hashtags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 12px; }
+.rc-hashtag {
+  font-size: 11px; padding: 2px 9px; border-radius: 20px;
+  background: var(--fog); color: var(--moss); font-weight: 600;
+}
+
+.rc-script {
+  margin-top: 14px; padding-top: 14px;
+  border-top: 1px dashed var(--fog2);
+}
+.rc-script-label {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: rgba(26,26,46,0.3); font-weight: 700; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.rc-script-content {
+  font-size: 12px; color: rgba(26,26,46,0.6); line-height: 1.85;
+  background: var(--fog); border-radius: 8px; padding: 12px;
+  white-space: pre-wrap;
+}
+
+.rc-footer {
+  display: flex; gap: 8px; padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(26,26,46,0.015);
+}
+.rc-footer .btn { padding: 7px 14px; font-size: 11px; }
+
+/* ─── SCHEDULE PANEL ─── */
+.sched-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.week-nav { display: flex; align-items: center; gap: 12px; }
+.week-nav-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1.5px solid var(--border); background: var(--white);
+  cursor: pointer; font-size: 14px; color: var(--ink2);
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s;
+}
+.week-nav-btn:hover { border-color: var(--moss); color: var(--moss); }
+.week-label { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+
+.sched-grid {
+  display: grid; grid-template-columns: 64px repeat(7,1fr);
+  border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--border);
+  gap: 1px;
+  box-shadow: var(--shadow);
+}
+.sg-head {
+  background: var(--ink); color: white;
+  padding: 12px 6px; text-align: center;
+  font-size: 11px; font-weight: 600;
+}
+.sg-head.today { background: var(--moss); }
+.sg-head .dnum { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; display: block; line-height: 1; }
+.sg-head .dname { font-size: 9px; opacity: 0.6; letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; display: block; }
+.sg-time { background: var(--fog2); padding: 8px 6px; font-size: 10px; color: rgba(26,26,46,0.4); text-align: right; display: flex; align-items: flex-start; justify-content: flex-end; padding-top: 10px; }
+.sg-cell { background: var(--white); min-height: 72px; padding: 5px; cursor: pointer; transition: background 0.15s; }
+.sg-cell:hover { background: var(--moss-pale); }
+.sg-post {
+  border-radius: 6px; padding: 5px 7px;
+  font-size: 11px; margin-bottom: 3px;
+  border-left: 3px solid; cursor: pointer;
+  transition: transform 0.15s;
+}
+.sg-post:hover { transform: translateX(2px); }
+.sg-post.ig { background: rgba(225,48,108,0.07); border-color: var(--ig); }
+.sg-post.threads { background: rgba(0,0,0,0.05); border-color: #333; }
+.sg-post.yt { background: rgba(255,0,0,0.06); border-color: var(--yt); }
+.sg-post .pt { font-weight: 700; color: var(--ink); line-height: 1.3; }
+.sg-post .ptime { font-size: 10px; color: rgba(26,26,46,0.4); }
+.sg-add { width: 22px; height: 22px; border-radius: 5px; border: 1.5px dashed var(--moss-light); background: none; cursor: pointer; color: var(--moss-light); font-size: 14px; display: flex; align-items: center; justify-content: center; margin: 3px auto 0; transition: all 0.18s; }
+.sg-add:hover { background: var(--moss); color: white; border-style: solid; }
+
+/* ─── EXCEL TABLE ─── */
+.excel-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; box-shadow: var(--shadow-sm); }
+.et { width: 100%; border-collapse: collapse; font-size: 13px; }
+.editable-cell {
+  cursor: text; border-radius: 5px; padding: 2px 5px;
+  display: inline-block; min-width: 40px;
+  transition: background 0.15s;
+}
+.editable-cell:hover { background: var(--moss-pale); }
+.preview-cell { color: rgba(26,26,46,0.55); font-size: 12px; }
+.et th { background: var(--ink); color: rgba(255,255,255,0.7); padding: 12px 16px; text-align: left; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.et td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.et tr:last-child td { border-bottom: none; }
+.et tr:hover td { background: var(--fog); }
+.et-platform { display: flex; align-items: center; gap: 6px; }
+.et-dot { width: 7px; height: 7px; border-radius: 50%; }
+.et-dot.ig { background: var(--ig); }
+.et-dot.threads { background: var(--ink2); }
+.et-dot.yt { background: var(--yt); }
+.et-platform-name { font-weight: 700; font-size: 12px; }
+.status {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+}
+.status.draft { background: var(--fog2); color: rgba(26,26,46,0.5); }
+.status.approved { background: rgba(6,199,85,0.1); color: #059945; }
+.status.scheduled { background: rgba(74,124,89,0.12); color: var(--moss); }
+.status.published { background: rgba(212,120,58,0.12); color: var(--amber); }
+
+/* ─── LINE PANEL ─── */
+.line-layout { display: grid; grid-template-columns: 300px 1fr; gap: 28px; align-items: start; }
+.line-phone-wrap {
+  background: #1C1C1E; border-radius: 44px;
+  padding: 18px; box-shadow: 0 30px 80px rgba(0,0,0,0.3);
+}
+.line-statusbar { display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; color: white; padding: 2px 8px 8px; }
+.line-screen { background: white; border-radius: 30px; overflow: hidden; }
+.line-appbar { background: var(--line-g); padding: 14px 16px; display: flex; align-items: center; gap: 10px; }
+.line-appbar-avatar { width: 38px; height: 38px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.line-appbar-name { color: white; font-weight: 700; font-size: 14px; }
+.line-appbar-status { color: rgba(255,255,255,0.7); font-size: 10px; margin-top: 1px; }
+.line-msgs { background: #C8DCEA; padding: 14px 10px; min-height: 320px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.lm { max-width: 85%; }
+.lm.bot { align-self: flex-start; }
+.lm.me { align-self: flex-end; }
+.lm-bubble { border-radius: 18px; padding: 10px 13px; font-size: 12px; line-height: 1.65; }
+.lm.bot .lm-bubble { background: white; border-radius: 4px 18px 18px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.lm.me .lm-bubble { background: var(--line-g); color: white; border-radius: 18px 4px 18px 18px; }
+.lm-time { font-size: 10px; color: rgba(0,0,0,0.35); margin-top: 3px; text-align: right; }
+.line-inputbar { background: white; border-top: 1px solid rgba(0,0,0,0.08); padding: 10px; display: flex; gap: 8px; }
+.line-input { flex:1; border: 1px solid rgba(0,0,0,0.1); border-radius: 20px; padding: 7px 13px; font-size: 12px; outline: none; font-family: inherit; }
+.line-send-btn { width: 36px; height: 36px; background: var(--line-g); border: none; border-radius: 50%; color: white; font-size: 15px; cursor: pointer; }
+
+.line-info-panel { padding: 0; }
+.line-info-panel h3 { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.line-info-panel .sub { font-size: 12px; color: rgba(26,26,46,0.45); margin-bottom: 24px; }
+.flow { display: flex; flex-direction: column; gap: 0; }
+.flow-item { display: flex; gap: 16px; }
+.flow-left { display: flex; flex-direction: column; align-items: center; }
+.flow-num { width: 32px; height: 32px; border-radius: 50%; background: var(--moss); color: white; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.flow-line { width: 2px; flex: 1; background: var(--fog2); margin: 4px 0; min-height: 32px; }
+.flow-right { padding-bottom: 28px; }
+.flow-title { font-weight: 700; font-size: 13px; color: var(--ink); margin-bottom: 4px; }
+.flow-desc { font-size: 12px; color: rgba(26,26,46,0.55); line-height: 1.6; }
+
+/* ─── QUICK STATS ─── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--white); border-radius: 12px; padding: 18px;
+  border: 1px solid var(--border);
+}
+.stat-value { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 11px; color: rgba(26,26,46,0.45); margin-top: 4px; }
+.stat-change { font-size: 10px; color: var(--moss); font-weight: 700; margin-top: 6px; }
+
+/* ─── MODAL ─── */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(26,26,46,0.5); backdrop-filter: blur(4px);
+  z-index: 400; align-items: center; justify-content: center;
+}
+.modal-backdrop.on { display: flex; }
+.modal {
+  background: var(--white); border-radius: 20px;
+  padding: 28px; width: 480px; max-width: 95vw;
+  box-shadow: var(--shadow-lg);
+  animation: fadeUp 0.2s ease;
+}
+.modal-title {
+  font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 800;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.modal-row { margin-bottom: 14px; }
+.modal-label {
+  font-size: 11px; font-weight: 700; color: rgba(26,26,46,0.5);
+  letter-spacing: 1px; text-transform: uppercase;
+  display: block; margin-bottom: 6px;
+}
+.modal-input, .modal-select, .modal-textarea {
+  width: 100%; border: 1.5px solid var(--border);
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 13px; font-family: inherit; color: var(--ink);
+  background: var(--fog); outline: none; transition: border-color 0.18s;
+}
+.modal-input:focus, .modal-select:focus, .modal-textarea:focus {
+  border-color: var(--moss); background: var(--white);
+}
+.modal-textarea { resize: vertical; min-height: 100px; line-height: 1.7; }
+.modal-plats { display: flex; gap: 8px; }
+.modal-plat {
+  flex: 1; padding: 9px; border-radius: 8px; border: 1.5px solid var(--border);
+  background: var(--fog); cursor: pointer; font-size: 12px; font-weight: 700;
+  font-family: inherit; transition: all 0.18s; text-align: center;
+}
+.modal-plat.ig.sel { background: var(--ig); color: white; border-color: var(--ig); }
+.modal-plat.threads.sel { background: #000; color: white; border-color: #000; }
+.modal-plat.yt.sel { background: var(--yt); color: white; border-color: var(--yt); }
+.modal-plat:not(.sel) { color: rgba(26,26,46,0.5); }
+.modal-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+/* ─── SPREADSHEET ─── */
+.et-row { transition: background 0.12s; }
+.et-row:hover { background: var(--fog) !important; }
+.et-num { color: rgba(26,26,46,0.3); font-size: 11px; text-align: center; user-select:none; }
+.sc {
+  display: block; min-height: 24px; padding: 3px 6px;
+  border-radius: 5px; cursor: text;
+  transition: background 0.15s; font-size: 13px;
+  white-space: pre-wrap; word-break: break-word;
+}
+.sc:hover { background: rgba(74,124,89,0.1); }
+.sc-bold { font-weight: 700; }
+.sc-content { font-size: 12px; color: rgba(26,26,46,0.65); max-width: 200px; max-height: 72px; overflow: hidden; }
+.sc-link { font-size: 11px; color: #4A7CCA; text-decoration: underline; max-width: 110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sc-num { text-align: center; font-weight: 700; font-family: 'Syne', sans-serif; font-size: 14px; }
+.sc-status { cursor: pointer; display: inline-block; text-align: center; line-height: 1.4; }
+.sc-select {
+  border: 1px solid transparent; background: transparent;
+  font-size: 12px; font-family: inherit; font-weight: 600;
+  color: var(--ink); border-radius: 5px; padding: 3px 4px;
+  cursor: pointer; outline: none; transition: all 0.15s;
+  max-width: 100px;
+}
+.sc-select:hover, .sc-select:focus { border-color: var(--moss); background: var(--moss-pale); }
+.sc-input {
+  width: 100%; border: 1.5px solid var(--moss); border-radius: 5px;
+  padding: 4px 7px; font-size: 13px; font-family: inherit;
+  background: white; outline: none; font-weight: 600;
+}
+.sc-textarea {
+  width: 100%; min-height: 72px; border: 1.5px solid var(--moss);
+  border-radius: 5px; padding: 6px 8px; font-size: 12px;
+  font-family: inherit; resize: vertical; outline: none; line-height: 1.6;
+}
+.del-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--border); background: none;
+  color: rgba(26,26,46,0.3); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; font-weight: 300;
+}
+.del-btn:hover { background: rgba(225,48,108,0.1); border-color: var(--ig); color: var(--ig); }
+
+/* ─── TREND TWO-COL LAYOUT ─── */
+.trend-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+.trend-layout .trend-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 10px; margin-bottom: 0;
+}
+
+/* ─── REFERENCE PANEL ─── */
+.ref-panel {
+  background: var(--white); border-radius: var(--radius);
+  border: 1px solid var(--border); min-height: 300px;
+  position: sticky; top: 80px;
+  overflow: hidden;
+}
+.ref-empty {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 280px; text-align: center;
+  font-size: 13px; color: rgba(26,26,46,0.3);
+  line-height: 1.8; padding: 24px;
+}
+.ref-header {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.ref-header-topic {
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800;
+  color: var(--ink);
+}
+.ref-header-meta {
+  font-size: 10px; color: rgba(26,26,46,0.4); margin-top: 3px;
+  letter-spacing: 0.5px;
+}
+.ref-videos { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.ref-video-card {
+  border-radius: 10px; padding: 11px 13px;
+  border: 1px solid var(--border); background: var(--fog);
+  transition: all 0.15s; cursor: default;
+}
+.ref-video-card:hover { background: var(--moss-pale); border-color: var(--moss-light); }
+.ref-video-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px; }
+.ref-video-type {
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+  padding: 3px 7px; border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+  text-transform: uppercase;
+}
+.ref-video-type.short { background: rgba(255,0,0,0.1); color: var(--yt); }
+.ref-video-type.long  { background: rgba(74,124,89,0.12); color: var(--moss); }
+.ref-video-title { font-size: 12px; font-weight: 700; line-height: 1.45; color: var(--ink); }
+.ref-video-why { font-size: 11px; color: rgba(26,26,46,0.55); line-height: 1.55; margin-bottom: 6px; }
+.ref-video-hook {
+  font-size: 11px; background: rgba(74,124,89,0.08);
+  border-left: 2px solid var(--moss); padding: 5px 8px;
+  border-radius: 0 6px 6px 0; color: var(--moss);
+  font-style: italic; line-height: 1.5;
+}
+.ref-use-btn {
+  margin-top: 8px; width: 100%;
+  padding: 6px; border-radius: 6px;
+  background: none; border: 1px solid var(--moss-light);
+  color: var(--moss); font-size: 11px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.ref-use-btn:hover { background: var(--moss); color: white; border-color: var(--moss); }
+
+/* ─── CHANNEL SWITCHER ─── */
+.ch-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 10px;
+  cursor: pointer; transition: all 0.18s;
+  margin-bottom: 4px; border: 1px solid transparent;
+  background: none; width: 100%; text-align: left;
+  font-family: inherit;
+}
+.ch-item:hover { background: rgba(255,255,255,0.06); }
+.ch-item.active { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.12); }
+.ch-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: white; flex-shrink: 0;
+}
+.ch-name { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.85); line-height: 1.2; }
+.ch-sub { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 1px; }
+
+/* ─── CHANNEL BADGE in topbar ─── */
+.ch-badge {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 700;
+  border: 1.5px solid var(--border);
+}
+
+/* ─── SPREADSHEET horizontal date layout ─── */
+.sheet-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+.sheet-table {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: 12px;
+  background: white;
+}
+.sheet-table th, .sheet-table td {
+  border: 1px solid rgba(26,26,46,0.08);
+  padding: 0;
+  vertical-align: top;
+}
+/* Row label column */
+.sheet-table .row-label {
+  background: var(--ink); color: rgba(255,255,255,0.7);
+  font-size: 10px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; padding: 10px 12px;
+  white-space: nowrap; min-width: 80px; width: 80px;
+  position: sticky; left: 0; z-index: 2;
+}
+/* Date header row */
+.sheet-table .date-header {
+  background: var(--ink2); color: white;
+  text-align: center; font-weight: 700; font-size: 12px;
+  padding: 8px 6px; min-width: 130px; width: 130px;
+}
+.sheet-table .date-header.has-content { background: var(--moss); }
+.sheet-table .date-header .dh-date { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; }
+.sheet-table .date-header .dh-day { font-size: 10px; opacity: 0.6; margin-top: 1px; }
+/* Data cells */
+.sheet-table .data-cell {
+  padding: 4px; vertical-align: top;
+  min-width: 130px; width: 130px;
+  background: white;
+}
+.sheet-table .data-cell.highlighted { background: rgba(240,220,230,0.25); }
+/* Editable cell inside sheet */
+.sheet-sc {
+  display: block; padding: 5px 7px; min-height: 28px;
+  border-radius: 4px; cursor: text;
+  font-size: 12px; line-height: 1.55; color: var(--ink);
+  white-space: pre-wrap; word-break: break-word;
+  transition: background 0.12s;
+}
+.sheet-sc:hover { background: rgba(74,124,89,0.1); }
+.sheet-sc.empty { color: rgba(26,26,46,0.2); font-style: italic; }
+.sheet-sc.bold { font-weight: 700; font-size: 13px; }
+.sheet-sc.link-val { color: #4A7CCA; text-decoration: underline; font-size: 11px; }
+.sheet-sc.num-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px; text-align: center; color: var(--moss); }
+.sheet-input {
+  width: 100%; border: none; outline: none;
+  padding: 5px 7px; font-size: 12px; font-family: inherit;
+  background: rgba(74,124,89,0.08); border-radius: 4px;
+  line-height: 1.55; resize: none;
+}
+.sheet-status {
+  display: inline-block; padding: 3px 8px; border-radius: 12px;
+  font-size: 10px; font-weight: 700; cursor: pointer;
+  transition: all 0.15s; margin: 4px;
+}
+.add-col-btn {
+  background: var(--fog); border: 1.5px dashed var(--moss-light);
+  color: var(--moss); font-size: 18px; font-weight: 300;
+  width: 40px; cursor: pointer; border-radius: 0;
+  transition: all 0.18s; vertical-align: top;
+}
+.add-col-btn:hover { background: var(--moss-pale); }
+
+/* ─── ANALYTICS ─── */
+.an-platform-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 20px; }
+.an-platform-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; }
+.yt-card { border-top: 3px solid #FF0000; }
+.ig-card { border-top: 3px solid #E1306C; }
+.th-card { border-top: 3px solid #111; }
+.an-plat-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.an-plat-icon { width: 36px; height: 36px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; color:white; flex-shrink:0; }
+.an-plat-name { font-family:'Syne',sans-serif; font-size:13px; font-weight:800; }
+.an-plat-sub { font-size:10px; color:rgba(26,26,46,0.4); margin-top:2px; }
+.an-connect-badge { color: var(--amber); font-weight:700; cursor:pointer; text-decoration:underline; }
+.an-connect-badge.connected { color: var(--moss); text-decoration:none; cursor:default; }
+.an-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+.an-metric { text-align:center; }
+.an-metric-val { font-family:'Syne',sans-serif; font-size:20px; font-weight:800; color: var(--ink); }
+.an-metric-label { font-size:10px; color:rgba(26,26,46,0.4); margin-top:2px; }
+.an-connect-btn { width:100%; padding:8px; border-radius:8px; border:1.5px dashed; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; transition:all 0.18s; background:none; }
+.an-connect-btn.yt { border-color:rgba(255,0,0,0.3); color:#CC0000; }
+.an-connect-btn.yt:hover { background:rgba(255,0,0,0.06); border-style:solid; }
+.an-connect-btn.ig { border-color:rgba(225,48,108,0.3); color:var(--ig); }
+.an-connect-btn.ig:hover { background:rgba(225,48,108,0.06); border-style:solid; }
+.an-connect-btn.th { border-color:rgba(0,0,0,0.2); color:#111; }
+.an-connect-btn.th:hover { background:rgba(0,0,0,0.04); border-style:solid; }
+
+.an-main-row { display: grid; grid-template-columns: 1fr 280px; gap: 14px; margin-bottom: 20px; }
+.an-chart-card, .an-manual-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 20px; }
+.an-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.an-card-title { font-family:'Syne',sans-serif; font-size:14px; font-weight:800; }
+.an-chart-tabs { display:flex; gap:4px; }
+.an-tab { padding:4px 12px; border-radius:6px; border:1.5px solid var(--border); background:none; font-size:11px; font-weight:700; cursor:pointer; font-family:inherit; color:var(--mid); transition:all 0.15s; }
+.an-tab.active { background:var(--moss); color:white; border-color:var(--moss); }
+.an-chart-note { font-size:10px; color:rgba(26,26,46,0.35); margin-top:10px; text-align:center; }
+.an-manual-form { display:flex; flex-direction:column; gap:8px; }
+.an-form-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.an-form-row label { font-size:11px; color:rgba(26,26,46,0.6); font-weight:600; flex-shrink:0; }
+.an-form-row input { width:90px; border:1.5px solid var(--border); border-radius:6px; padding:5px 8px; font-size:12px; font-family:inherit; outline:none; text-align:right; transition:border-color 0.15s; }
+.an-form-row input:focus { border-color:var(--moss); }
+
+/* Connect instructions */
+.an-connect-section { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); padding: 24px; }
+.an-connect-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.an-connect-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:800; }
+.an-steps { display:flex; flex-direction:column; gap:0; }
+.an-step { display:flex; gap:16px; }
+.an-step-left { display:flex; flex-direction:column; align-items:center; }
+.an-step-num { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:white; flex-shrink:0; }
+.an-step-line { width:2px; flex:1; min-height:28px; margin:3px 0; background:var(--fog2); }
+.an-step-right { padding-bottom:24px; }
+.an-step-title { font-weight:700; font-size:13px; margin-bottom:4px; }
+.an-step-desc { font-size:12px; color:rgba(26,26,46,0.55); line-height:1.7; }
+.an-step-code { background:var(--ink); color:#7FFFD4; border-radius:8px; padding:10px 14px; font-family:monospace; font-size:11px; margin-top:8px; line-height:1.8; overflow-x:auto; white-space:pre; }
+.an-step-link { display:inline-flex; align-items:center; gap:5px; background:var(--fog); border:1px solid var(--border); border-radius:6px; padding:5px 12px; font-size:11px; font-weight:700; color:var(--ink); text-decoration:none; margin-top:6px; transition:all 0.15s; cursor:pointer; }
+.an-step-link:hover { background:var(--moss-pale); border-color:var(--moss); color:var(--moss); }
+
+/* ─── LOADING ─── */
+.loading {
+  display: none; position: fixed; inset: 0;
+  background: rgba(242,240,236,0.88); backdrop-filter: blur(6px);
+  z-index: 300; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+}
+.loading.on { display: flex; }
+.spinner { width: 44px; height: 44px; border-radius: 50%; border: 3px solid var(--fog2); border-top-color: var(--moss); animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-label { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; color: var(--ink); }
+.loading-steps-list { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.ls { font-size: 12px; color: rgba(26,26,46,0.3); transition: color 0.4s, font-weight 0.4s; }
+.ls.on { color: var(--moss); font-weight: 700; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--ink); color: white;
+  padding: 12px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 500; z-index: 999;
+  transform: translateY(16px); opacity: 0;
+  transition: all 0.25s; max-width: 320px;
+  box-shadow: var(--shadow-lg);
+}
+.toast.on { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-name">親子共好<br><em>Content Studio</em></div>
+    <div class="brand-sub">AI Scheduler · v2.0</div>
+  </div>
+
+  <div class="time-badge">
+    <div class="clock">⏱</div>
+    <div class="time-badge-text">
+      <div class="label">Weekly Time Budget</div>
+      <div class="value">1–3 hrs / week</div>
+    </div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section-label">頻道 Channel</div>
+    <button class="ch-item active" id="ch-yt" onclick="switchChannel('yt')">
+      <span class="ch-icon" style="background:#FF0000">▶</span>
+      <div class="ch-info">
+        <div class="ch-name">潤兒 wowow</div>
+        <div class="ch-sub">YouTube</div>
+      </div>
+    </button>
+    <button class="ch-item" id="ch-ig" onclick="switchChannel('ig')">
+      <span class="ch-icon" style="background:linear-gradient(135deg,#833AB4,#E1306C,#F77737)">IG</span>
+      <div class="ch-info">
+        <div class="ch-name">DONG MA 董娘</div>
+        <div class="ch-sub">Instagram</div>
+      </div>
+    </button>
+    <button class="ch-item" id="ch-threads" onclick="switchChannel('threads')">
+      <span class="ch-icon" style="background:#000">🪡</span>
+      <div class="ch-info">
+        <div class="ch-name">DONG MA 董娘</div>
+        <div class="ch-sub">脆 Threads</div>
+      </div>
+    </button>
+
+    <div class="nav-section-label" style="margin-top:16px">功能</div>
+    <button class="nav-item active" onclick="go('today')">
+      <span class="nav-icon">🔥</span> 今日熱點 &amp; 產文
+    </button>
+    <button class="nav-item" onclick="go('schedule')">
+      <span class="nav-icon">📅</span> 排程看板
+    </button>
+    <button class="nav-item" onclick="go('excel')">
+      <span class="nav-icon">📊</span> 內容管理表
+    </button>
+    <button class="nav-item" onclick="go('analytics')">
+      <span class="nav-icon">📈</span> 數據分析
+    </button>
+    <button class="nav-item" onclick="go('line')">
+      <span class="nav-icon">💬</span> LINE 審核流
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="avatar">媽</div>
+    <div>
+      <div class="user-name">親子共好創辦人</div>
+      <div class="user-role">Mama × Entrepreneur</div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-title" id="ttitle">🔥 今日熱點 × AI 產文</div>
+      <div class="topbar-subtitle" id="tdate"></div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-ghost" onclick="exportExcel()">📊 Export Excel</button>
+      <button class="btn btn-line" onclick="go('line')">💬 LINE 通知</button>
+      <button class="btn btn-moss" onclick="generatePost()" id="quickGenBtn">✨ Quick Generate</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- TODAY PANEL -->
+    <div class="panel active" id="panel-today">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--moss)">12</div>
+          <div class="stat-label">本月已發貼文</div>
+          <div class="stat-change">↑ +3 vs 上月</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--ig)">8.4k</div>
+          <div class="stat-label">本週 Total Reach</div>
+          <div class="stat-change">↑ +22%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--amber)">2.1h</div>
+          <div class="stat-label">本週花費時間</div>
+          <div class="stat-change">⚡ Budget 內</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="color:var(--yt)">3</div>
+          <div class="stat-label">排程中貼文</div>
+          <div class="stat-change">→ 下一篇明天</div>
+        </div>
+      </div>
+
+      <!-- Trends -->
+      <div class="section-header">
+        <div class="section-title" id="trendSectionTitle">📡 本週熱點話題 — 點選主題</div>
+        <div class="section-meta" id="trendSectionMeta">AI 即時分析 · 2025年育兒社群</div>
+      </div>
+      <div class="trend-layout">
+        <div class="trend-grid" id="trendGrid"></div>
+        <div class="ref-panel" id="refPanel">
+          <div class="ref-empty">
+            ← 點選左側任一熱點<br>查看參考影片方向
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate -->
+      <div class="gen-area">
+        <div class="gen-area-title">
+          ✨ Generate Post <span>— 選好平台，一鍵產文</span>
+        </div>
+        <div class="platform-toggles">
+          <button class="ptoggle ig on" id="tog-ig" onclick="togPlat('ig')">📸 Instagram</button>
+          <button class="ptoggle threads on" id="tog-threads" onclick="togPlat('threads')">🪡 Threads</button>
+          <button class="ptoggle yt" id="tog-yt" onclick="togPlat('yt')">🎬 YT Shorts 腳本</button>
+        </div>
+        <div class="gen-row">
+          <button class="gen-btn" id="genBtn" onclick="generatePost()">
+            <span>🤖</span> AI 生成貼文
+          </button>
+          <div class="gen-hint">每次約 <strong>30 秒</strong>，省下你 20 分鐘手寫</div>
+        </div>
+      </div>
+
+      <div id="results" class="results"></div>
+    </div>
+
+    <!-- SCHEDULE PANEL -->
+    <div class="panel" id="panel-schedule">
+      <div class="sched-toolbar">
+        <div class="week-nav">
+          <button class="week-nav-btn" onclick="shiftWeek(-1)">‹</button>
+          <div class="week-label" id="weekLabel"></div>
+          <button class="week-nav-btn" onclick="shiftWeek(1)">›</button>
+        </div>
+        <button class="btn btn-moss" onclick="openModal(new Date().getDay(), 3)">+ New Post</button>
+      </div>
+      <div class="sched-grid" id="schedGrid"></div>
+    </div>
+
+    <!-- EXCEL PANEL -->
+    <div class="panel" id="panel-excel">
+      <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center; flex-wrap:wrap;">
+        <button class="btn btn-moss" onclick="addDateCol()">+ 新增日期欄</button>
+        <button class="btn btn-ghost" onclick="exportExcel()">⬇️ Export Excel</button>
+        <span style="margin-left:auto; font-size:12px; color:rgba(26,26,46,0.45)">
+          頻道：<strong id="activeChLabel">潤兒 wowow · YouTube</strong> ·
+          共 <strong id="postCount">0</strong> 個日期
+        </span>
+      </div>
+      <div class="sheet-wrap">
+        <table class="sheet-table" id="sheetTable">
+          <tbody id="sheetBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ANALYTICS PANEL -->
+    <div class="panel" id="panel-analytics">
+
+      <!-- Platform metric cards -->
+      <div class="an-platform-row">
+        <!-- YouTube -->
+        <div class="an-platform-card yt-card">
+          <div class="an-plat-header">
+            <div class="an-plat-icon" style="background:#FF0000">▶</div>
+            <div>
+              <div class="an-plat-name">潤兒 wowow</div>
+              <div class="an-plat-sub">YouTube · <span class="an-connect-badge" id="yt-badge" onclick="showConnect('yt')">未串接 →</span></div>
+            </div>
+          </div>
+          <div class="an-metrics" id="yt-metrics">
+            <div class="an-metric"><div class="an-metric-val" id="yt-subs">74</div><div class="an-metric-label">訂閱數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="yt-views">—</div><div class="an-metric-label">本週觀看</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="yt-avd">—</div><div class="an-metric-label">平均完播率</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="yt-videos">4</div><div class="an-metric-label">本月影片</div></div>
+          </div>
+          <button class="an-connect-btn yt" onclick="showConnect('yt')">🔗 串接 YouTube Analytics API</button>
+        </div>
+
+        <!-- Instagram -->
+        <div class="an-platform-card ig-card">
+          <div class="an-plat-header">
+            <div class="an-plat-icon" style="background:linear-gradient(135deg,#833AB4,#E1306C,#F77737)">IG</div>
+            <div>
+              <div class="an-plat-name">DONG MA 董娘</div>
+              <div class="an-plat-sub">Instagram · <span class="an-connect-badge" id="ig-badge" onclick="showConnect('ig')">未串接 →</span></div>
+            </div>
+          </div>
+          <div class="an-metrics" id="ig-metrics">
+            <div class="an-metric"><div class="an-metric-val" id="ig-followers">—</div><div class="an-metric-label">追蹤數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="ig-reach">—</div><div class="an-metric-label">本週觸及</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="ig-likes">—</div><div class="an-metric-label">按讚數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="ig-saves">—</div><div class="an-metric-label">收藏數</div></div>
+          </div>
+          <button class="an-connect-btn ig" onclick="showConnect('ig')">🔗 串接 Meta Graph API</button>
+        </div>
+
+        <!-- Threads -->
+        <div class="an-platform-card th-card">
+          <div class="an-plat-header">
+            <div class="an-plat-icon" style="background:#111">🪡</div>
+            <div>
+              <div class="an-plat-name">DONG MA 董娘</div>
+              <div class="an-plat-sub">Threads · <span class="an-connect-badge" id="th-badge" onclick="showConnect('threads')">未串接 →</span></div>
+            </div>
+          </div>
+          <div class="an-metrics" id="th-metrics">
+            <div class="an-metric"><div class="an-metric-val" id="th-followers">—</div><div class="an-metric-label">追蹤數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="th-replies">—</div><div class="an-metric-label">留言數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="th-reposts">—</div><div class="an-metric-label">轉發數</div></div>
+            <div class="an-metric"><div class="an-metric-val" id="th-likes">—</div><div class="an-metric-label">按讚數</div></div>
+          </div>
+          <button class="an-connect-btn th" onclick="showConnect('threads')">🔗 串接 Threads API</button>
+        </div>
+      </div>
+
+      <!-- Chart + Manual input -->
+      <div class="an-main-row">
+        <!-- Follower trend chart -->
+        <div class="an-chart-card">
+          <div class="an-card-header">
+            <div class="an-card-title">📈 追蹤數走勢</div>
+            <div class="an-chart-tabs">
+              <button class="an-tab active" onclick="switchChartPlatform('yt',this)">YT</button>
+              <button class="an-tab" onclick="switchChartPlatform('ig',this)">IG</button>
+              <button class="an-tab" onclick="switchChartPlatform('threads',this)">脆</button>
+            </div>
+          </div>
+          <canvas id="followerChart" height="180"></canvas>
+          <div class="an-chart-note">💡 串接 API 後自動更新 · 目前為手動填入示範數據</div>
+        </div>
+
+        <!-- Manual data entry -->
+        <div class="an-manual-card">
+          <div class="an-card-header">
+            <div class="an-card-title">✏️ 手動更新數據</div>
+            <div style="font-size:11px;color:rgba(26,26,46,0.4)">每週更新一次</div>
+          </div>
+          <div class="an-manual-form">
+            <div class="an-form-row">
+              <label>YT 訂閱數</label>
+              <input type="number" id="input-yt-subs" placeholder="74" onchange="updateManual('yt','subs',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>IG 追蹤數</label>
+              <input type="number" id="input-ig-followers" placeholder="0" onchange="updateManual('ig','followers',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>IG 本週觸及</label>
+              <input type="number" id="input-ig-reach" placeholder="0" onchange="updateManual('ig','reach',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>IG 本週按讚</label>
+              <input type="number" id="input-ig-likes" placeholder="0" onchange="updateManual('ig','likes',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>IG 本週收藏</label>
+              <input type="number" id="input-ig-saves" placeholder="0" onchange="updateManual('ig','saves',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>脆 追蹤數</label>
+              <input type="number" id="input-th-followers" placeholder="0" onchange="updateManual('threads','followers',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>脆 本週留言</label>
+              <input type="number" id="input-th-replies" placeholder="0" onchange="updateManual('threads','replies',this.value)">
+            </div>
+            <div class="an-form-row">
+              <label>脆 本週轉發</label>
+              <input type="number" id="input-th-reposts" placeholder="0" onchange="updateManual('threads','reposts',this.value)">
+            </div>
+            <button class="btn btn-moss" style="width:100%;margin-top:8px" onclick="saveManualData()">💾 儲存本週數據</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- API Connect Instructions -->
+      <div class="an-connect-section" id="connectSection" style="display:none">
+        <div class="an-connect-header">
+          <div class="an-connect-title" id="connectTitle">串接教學</div>
+          <button onclick="document.getElementById('connectSection').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--mid)">×</button>
+        </div>
+        <div id="connectContent"></div>
+      </div>
+
+    </div>
+
+    <!-- LINE PANEL -->
+    <div class="panel" id="panel-line">
+      <div class="line-layout">
+        <!-- Phone -->
+        <div class="line-phone-wrap">
+          <div class="line-statusbar">
+            <span>9:41</span><span>📶 100%</span>
+          </div>
+          <div class="line-screen">
+            <div class="line-appbar">
+              <div class="line-appbar-avatar">🤖</div>
+              <div>
+                <div class="line-appbar-name">親子共好 AI</div>
+                <div class="line-appbar-status">Official Account · 在線</div>
+              </div>
+            </div>
+            <div class="line-msgs" id="lineMsgs">
+              <div class="lm bot">
+                <div class="lm-bubble">
+                  👋 早安！今日 <strong id="lineDate"></strong><br><br>
+                  🔥 熱點：<strong>孩子螢幕時間管理</strong>討論度暴增！<br><br>
+                  已備好 3 平台草稿，回覆「查看」或「✅ 直接發出」
+                </div>
+                <div class="lm-time">09:00</div>
+              </div>
+              <div class="lm bot">
+                <div class="lm-bubble">
+                  📝 <b>Threads 預覽：</b><br>「育兒路上，3C 不是敵人，是工具。我家如何建立螢幕使用公約...」<br><br>
+                  IG &amp; YT 腳本也準備好囉 ✨
+                </div>
+                <div class="lm-time">09:01</div>
+              </div>
+            </div>
+            <div class="line-inputbar">
+              <input class="line-input" id="lineInput" placeholder="回覆「✅ 發出」或「✏️ 修改」..." onkeydown="if(event.key==='Enter')lineReply()">
+              <button class="line-send-btn" onclick="lineReply()">➤</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info -->
+        <div class="line-info-panel">
+          <h3>LINE 一鍵審核 × 自動發文</h3>
+          <div class="sub">專為每週 1–3 小時的媽媽設計的最省力工作流</div>
+          <div class="flow">
+            <div class="flow-item">
+              <div class="flow-left">
+                <div class="flow-num">1</div>
+                <div class="flow-line"></div>
+              </div>
+              <div class="flow-right">
+                <div class="flow-title">🌅 每日 09:00 — AI 推送熱點</div>
+                <div class="flow-desc">系統自動搜尋育兒、永續、共學議題的今日討論熱點，直接送到你的 LINE。完全不用開電腦。</div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-left">
+                <div class="flow-num">2</div>
+                <div class="flow-line"></div>
+              </div>
+              <div class="flow-right">
+                <div class="flow-title">👀 LINE 中預覽三平台草稿</div>
+                <div class="flow-desc">IG、Threads、YT Shorts 腳本都在 LINE 裡，滑一滑就能看完，不用切換 App。</div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-left">
+                <div class="flow-num">3</div>
+                <div class="flow-line"></div>
+              </div>
+              <div class="flow-right">
+                <div class="flow-title">✅ 回覆「發出」— 自動發布</div>
+                <div class="flow-desc">滿意就直接回「✅ 發出」；想改就打你的想法讓 AI 修改。平均決策時間 &lt; 2 分鐘。</div>
+              </div>
+            </div>
+            <div class="flow-item">
+              <div class="flow-left">
+                <div class="flow-num">4</div>
+              </div>
+              <div class="flow-right">
+                <div class="flow-title">📊 晚上 9 點 — 數據週報</div>
+                <div class="flow-desc">每天晚上自動回報觸及數、互動率，讓你掌握哪個主題最受共鳴，優化下週策略。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- NEW POST MODAL -->
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">📝 手動新增貼文</div>
+
+    <div class="modal-row">
+      <label class="modal-label">平台 Platform</label>
+      <div class="modal-plats">
+        <button class="modal-plat threads sel" id="mp-threads" onclick="toggleModalPlat('threads')">🪡 Threads</button>
+        <button class="modal-plat ig" id="mp-ig" onclick="toggleModalPlat('ig')">📸 IG</button>
+        <button class="modal-plat yt" id="mp-yt" onclick="toggleModalPlat('yt')">🎬 YT Shorts</button>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <label class="modal-label">貼文主題（10字內）</label>
+      <input class="modal-input" id="m-topic" placeholder="例：老公用育兒方式教我曬衣服" maxlength="20">
+    </div>
+
+    <div class="modal-row">
+      <label class="modal-label">貼文內容</label>
+      <textarea class="modal-textarea" id="m-content" placeholder="貼上你的貼文內容..."></textarea>
+    </div>
+
+    <div class="modal-row-2">
+      <div>
+        <label class="modal-label">發文日期</label>
+        <input class="modal-input" id="m-date" type="date">
+      </div>
+      <div>
+        <label class="modal-label">發文時間</label>
+        <input class="modal-input" id="m-time" type="time" value="20:00">
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <label class="modal-label">狀態 Status</label>
+      <select class="modal-select" id="m-status">
+        <option value="draft">草稿 Draft</option>
+        <option value="approved">已審核 Approved</option>
+        <option value="scheduled" selected>已排程 Scheduled</option>
+      </select>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-moss" onclick="savePost()">✅ 新增到排程</button>
+    </div>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="loading" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-label">AI 正在生成貼文...</div>
+  <div class="loading-steps-list">
+    <div class="ls" id="ls1">🔍 搜尋今日熱點話題...</div>
+    <div class="ls" id="ls2">✍️ 撰寫 Threads 貼文...</div>
+    <div class="ls" id="ls3">📸 優化 IG 視覺文案...</div>
+    <div class="ls" id="ls4">🎬 生成 YT Shorts 腳本...</div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+// ── TREND DATA (per channel) ──
+const TRENDS_BY_CH = {
+  yt: [
+    { id:1, topic:"Tomica 新車開箱", heat:"🔥🔥🔥 超熱", desc:"最新 Tomica Premium 系列討論量爆增，玩具開箱類 YT Shorts 完播率極高", tags:["#Tomica","#玩具開箱","#小汽車"],
+      refs:[
+        { type:"short", title:"【30秒開箱】新款 Tomica GT-R 黑盒值得買嗎？", why:"直接比較新舊款差異，觀眾留言詢問率高", hook:"「這台跟普通版差在哪？今天來拆給你看」" },
+        { type:"short", title:"孩子第一次看到 Tomica 迪士尼的反應😂", why:"親子反應影片完播率比單純開箱高 40%", hook:"「我以為他會選麥坤，結果他選了這台...」" },
+        { type:"long",  title:"Tomica 全系列比較！哪款最值得買？", why:"長影片導購型，帶來穩定搜尋流量", hook:"「買過 20 幾款之後，我只推這 5 台」" },
+      ]
+    },
+    { id:2, topic:"LEGO 親子共玩", heat:"🔥🔥 穩定熱", desc:"LEGO City、Creator 系列親子一起拼的影片互動率最高，適合週末內容", tags:["#LEGO","#親子","#積木"],
+      refs:[
+        { type:"short", title:"3歲可以玩 LEGO 嗎？我家的真實測試", why:"家長最常搜尋的問題，搜尋點擊率高", hook:"「我本來以為太難，但他做到讓我傻眼」" },
+        { type:"short", title:"LEGO 拼完可以這樣玩！延伸玩法不浪費", why:"實用技巧型，分享率是普通開箱的 2 倍", hook:"「拼好就收起來太可惜了，這樣玩更好」" },
+        { type:"long",  title:"帶小孩逛 LEGO 旗艦店！哪款最划算？", why:"實地體驗類，帶出門場景引共鳴", hook:"「預算 1000 元，我們最後買了這個」" },
+      ]
+    },
+    { id:3, topic:"DIY 手作玩具", heat:"🔥🔥 上升快", desc:"親子 DIY 影片完播率比開箱高，材料成本低但製作感強，YouTube 演算法偏好", tags:["#DIY","#手作","#親子活動"],
+      refs:[
+        { type:"short", title:"用紙箱做停車場！Tomica 軌道 DIY 超簡單", why:"結合 Tomica 和 DIY 雙關鍵字，搜尋量雙倍", hook:"「這個停車場我做了兩小時，孩子玩了兩天」" },
+        { type:"short", title:"家裡素材做玩具！5 分鐘完成", why:"零成本吸引預算有限家長，分享率高", hook:"「冰棒棍＋橡皮筋，就能做這個」" },
+        { type:"long",  title:"週末 DIY 大挑戰！爸媽帶孩子做 LEGO 收納架", why:"週末親子主題，長影片深度互動好", hook:"「做完之後孩子說：我們明天還要做！」" },
+      ]
+    },
+    { id:4, topic:"親子活動體驗", heat:"🔥🔥 週末熱", desc:"帶孩子去哪玩系列，在台灣地區搜尋量每週末暴增，適合週四發片時間", tags:["#親子活動","#週末","#台灣"],
+      refs:[
+        { type:"short", title:"台北最好玩的室內場？帶孩子實測！", why:"本地搜尋關鍵字，精準觸及台灣家長", hook:"「花了 800 元，孩子玩了 3 小時不想回家」" },
+        { type:"short", title:"雨天不無聊！室內玩 Tomica 大賽這樣辦", why:"天氣不好的備用方案，收藏率極高", hook:"「下雨天在家辦個 Tomica 大賽，超好玩」" },
+        { type:"long",  title:"親子一日遊 Vlog！玩具店＋公園全記錄", why:"生活感 Vlog 讓觀眾感覺認識你，訂閱黏著度高", hook:"「今天沒什麼計畫，就這樣玩了一整天」" },
+      ]
+    },
+    { id:5, topic:"玩具 vs 玩具對決", heat:"🔥🔥🔥 爆款格式", desc:"比較型內容 CTR 最高，「A vs B 哪個好？」格式完播率比一般開箱高 60%", tags:["#玩具比較","#開箱","#Tomica"],
+      refs:[
+        { type:"short", title:"Tomica vs Hot Wheels！哪個更值得買？", why:"比較型標題 CTR 高，兩邊粉絲都會點進來", hook:"「我買了兩款讓孩子選，結果出乎意料」" },
+        { type:"short", title:"100元 vs 1000元玩具！孩子更喜歡哪個？", why:"價格反差引發好奇心，分享率超高", hook:"「貴的不一定贏，這個測試結果讓我反省」" },
+        { type:"long",  title:"LEGO 原廠 vs 副廠積木！真的差很多嗎？", why:"討論度高話題，留言戰場讓演算法瘋推", hook:"「我終於做了這個大家一直問的比較」" },
+      ]
+    },
+    { id:6, topic:"孩子反應真實記錄", heat:"🔥🔥 情感爆款", desc:"孩子第一次反應類影片分享率最高，引發爸媽強烈共鳴，完播率接近 90%", tags:["#孩子反應","#親子","#真實"],
+      refs:[
+        { type:"short", title:"孩子第一次看到 LEGO 城市的反應😭", why:"情感共鳴類，媽媽群組瘋傳，分享率第一", hook:"「我只是想記錄下來，沒想到他說了這句話」" },
+        { type:"short", title:"買錯玩具了嗎？孩子開箱後的真實反應", why:"懸念感標題讓觀眾忍不住點進來", hook:"「拆開包裝的那一秒，我後悔了一秒鐘」" },
+        { type:"long",  title:"孩子自己選玩具！給他 500 元在玩具店逛", why:"孩子自主性主題，親子教育連結，留言超多", hook:"「我說你自己決定，看他怎麼花這 500 元」" },
+      ]
+    },
+  ],
+  ig: [
+    { id:1, topic:"孩子螢幕時間管理", heat:"🔥🔥🔥 極熱", desc:"3C 公約不是禁止是協商，媽媽社群頭號話題", tags:["#3C管理","#親子公約","#育兒"],
+      refs:[
+        { type:"short", title:"我家的螢幕時間公約長這樣", why:"具體做法型貼文儲存率是一般貼文 3 倍", hook:"「不是禁止，是一起訂規則的過程」" },
+        { type:"short", title:"孩子哭著要手機，我的處理方式", why:"衝突場景引發強烈共鳴，留言率超高", hook:"「那天他在地上滾，我沒有讓步」" },
+        { type:"long",  title:"3C 不是敵人｜我們如何建立健康的螢幕習慣", why:"深度分享型，適合 IG 輪播圖文，收藏率高", hook:"「從每天崩潰到現在他自己會管，我做了這件事」" },
+      ]
+    },
+    { id:2, topic:"永續親子便當", heat:"🔥🔥 上升中", desc:"無塑料、當季食材、減碳午餐", tags:["#永續","#環保便當","#共學"],
+      refs:[
+        { type:"short", title:"這週便當不用塑膠袋的挑戰", why:"挑戰型格式完播率高，容易引發跟做", hook:"「聽起來很難，但我發現其實只要做這一件事」" },
+        { type:"short", title:"孩子挑食？這樣做便當他全部吃完", why:"解決問題型，媽媽最常搜尋的煩惱", hook:"「同樣的食材，換個方式裝他就吃了」" },
+        { type:"long",  title:"一週永續便當全記錄｜食材＋購買來源", why:"實用清單型，儲存分享率雙高", hook:"「每週只需要採買一次，這樣規劃不累」" },
+      ]
+    },
+    { id:3, topic:"共學圈大爆發", heat:"🔥🔥🔥 話題引爆", desc:"實驗教育、自學共學，討論量達新高", tags:["#共學","#自學","#實驗教育"],
+      refs:[
+        { type:"short", title:"我們為什麼選擇共學不送幼稚園", why:"有爭議性的決定最容易引發留言討論", hook:"「這個決定讓很多人不理解，但我不後悔」" },
+        { type:"short", title:"共學圈一天長這樣｜真實紀錄", why:"日常生活流水帳在 IG 最高觸及", hook:"「早上沒有上課表，但我們學了好多」" },
+        { type:"long",  title:"想加入共學圈？這些你要先知道", why:"新手引導型，觸及有需求的家長精準受眾", hook:"「加入前我以為很輕鬆，實際上這樣說更準確」" },
+      ]
+    },
+    { id:4, topic:"職場媽媽時間術", heat:"🔥🔥 穩定熱門", desc:"兼顧工作育兒，留言率超高", tags:["#職場媽媽","#時間管理","#媽媽創業"],
+      refs:[
+        { type:"short", title:"我一天是怎麼過的？職場媽媽時間表", why:"時間表類貼文儲存率極高，觀眾最愛收藏", hook:"「早上5點起床不是傳說，是策略」" },
+        { type:"short", title:"帶孩子創業的第一年，沒人告訴我這件事", why:"誠實分享負面經驗引發超強共鳴", hook:"「我以為可以兼顧，結果這兩件事都沒做好」" },
+        { type:"long",  title:"職場媽媽必學的 5 個時間管理方法", why:"清單型輪播圖文，IG 演算法最愛推的格式", hook:"「不是要你更努力，是要你更聰明地分配」" },
+      ]
+    },
+    { id:5, topic:"低消費玩具革命", heat:"🔥 新興", desc:"拒絕過度消費，回歸自然素材", tags:["#極簡育兒","#永續","#玩具"],
+      refs:[
+        { type:"short", title:"這個月我沒買任何玩具，孩子反應是這樣", why:"反直覺的實驗結果讓人忍不住點進來", hook:"「我以為他會鬧，結果他反而這樣做」" },
+        { type:"short", title:"100元以內的玩具，比昂貴的更好玩？", why:"低成本＋驚喜感的結合，分享率高", hook:"「這個是夜市買的，玩了比 LEGO 還久」" },
+        { type:"long",  title:"我家的玩具斷捨離全記錄", why:"整理類內容 IG 儲存率名列前茅", hook:"「丟了一半玩具，孩子說謝謝你」" },
+      ]
+    },
+    { id:6, topic:"親子正念情緒", heat:"🔥🔥 快速竄升", desc:"正念教養成必修課，分享量暴增", tags:["#正念","#情緒教育","#親子"],
+      refs:[
+        { type:"short", title:"孩子崩潰時，我現在的處理方式", why:"具體做法型，媽媽最需要的實戰技巧", hook:"「以前我會一起崩潰，現在我做這三件事」" },
+        { type:"short", title:"睡前親子正念 5 分鐘，改變了我們的關係", why:"睡前例行公事是媽媽最高共鳴主題", hook:"「只要 5 分鐘，但效果讓我驚訝」" },
+        { type:"long",  title:"情緒教育怎麼做？我的實際做法", why:"輪播圖文清單型，觸及有教養困擾的家長", hook:"「不是要孩子不哭，是讓他學會說出來」" },
+      ]
+    },
+  ],
+  threads: [
+    { id:1, topic:"老公育兒語錄", heat:"🔥🔥🔥 極熱", desc:"爸爸說的育兒金句讓媽媽們瘋傳，留言互動爆棚", tags:["#育兒","#老公","#親子日常"],
+      refs:[
+        { type:"short", title:"老公說：「帶小孩有什麼難的」然後...😂", why:"反轉故事結構讓人忍不住想看結果", hook:"「他說完這句話的三小時後，他就懂了」" },
+        { type:"short", title:"老公用教孩子的方式教我，我還真的學會了", why:"自嘲＋溫馨，留言都說「我也是！」", hook:"「說好了換媽媽說，結果我認真複誦了一遍」" },
+        { type:"short", title:"今天老公說了一句話，讓我愣了三秒", why:"懸念開頭吊胃口，完讀率極高", hook:"「他說：你有沒有想過，你才是最難帶的那個」" },
+      ]
+    },
+    { id:2, topic:"媽媽崩潰實錄", heat:"🔥🔥🔥 共鳴王", desc:"真實崩潰日常最高共鳴，留言都是「我也是！」", tags:["#媽媽日記","#崩潰","#育兒"],
+      refs:[
+        { type:"short", title:"今天完整體會到家庭主婦有多累", why:"直白流水帳最高觸及，讓人感覺被看見", hook:"「早上匆忙準備早餐，吾兒賴床錯過校車...」" },
+        { type:"short", title:"孩子同時哭、電話來、飯燒焦，我站在廚房笑了", why:"荒謬場景引發強烈共鳴，轉發率高", hook:"「那個笑不是開心，是已經超載的那種笑」" },
+        { type:"short", title:"致所有今天沒有崩潰的媽媽，你很厲害", why:"正向收尾讓人想收藏和轉發", hook:"「不是你做得夠多，是這件事本來就夠難了」" },
+      ]
+    },
+    { id:3, topic:"孩子說了什麼金句", heat:"🔥🔥 超萌", desc:"童言童語截圖類貼文分享率第一", tags:["#童言童語","#孩子","#親子"],
+      refs:[
+        { type:"short", title:"孩子問我：媽媽你工作是在做什麼？", why:"童言問大人，引發反思型留言如潮水", hook:"「我解釋了五分鐘，他說：所以就是坐著嗎」" },
+        { type:"short", title:"今天孩子說了一句話讓我傻住", why:"懸念吊胃口格式，Threads 完讀率最高", hook:"「我問他最喜歡誰，他說：喜歡睡著的媽媽」" },
+        { type:"short", title:"O型平均年齡87歲，A型62歲，我先查了我老公血型", why:"引用外部資訊切入自身，留言立刻衝起來", hook:"「本來以為我會是那個被留下的人，現在看來...」" },
+      ]
+    },
+    { id:4, topic:"職場媽媽二三事", heat:"🔥🔥 穩定熱", desc:"工作兼顧育兒的真實吐槽，引發大量共鳴", tags:["#職場媽媽","#兼顧","#創業"],
+      refs:[
+        { type:"short", title:"開會開到一半孩子跑進來說：媽媽我要大便", why:"真實尷尬場景讓人噴笑又有感", hook:"「我跟客戶說稍等，但他不等」" },
+        { type:"short", title:"今天有人問我：你是全職媽媽還是有在工作？", why:"有觸動感的問題引發大量留言討論", hook:"「我楞了一下，不知道哪個才算正確答案」" },
+        { type:"short", title:"創業第一年學到的最重要一件事", why:"精煉經驗分享，轉發率高、追蹤率上升", hook:"「不是關於錢，是關於一件我忘記的事」" },
+      ]
+    },
+    { id:5, topic:"永續育兒小筆記", heat:"🔥 上升中", desc:"減少玩具消費、環保選擇，意識型媽媽討論熱", tags:["#永續","#環保","#育兒"],
+      refs:[
+        { type:"short", title:"這個月孩子生日，我決定不辦派對不買玩具", why:"反常規決定最容易引發討論與留言", hook:"「不是捨不得，是真的覺得夠了」" },
+        { type:"short", title:"把塑膠玩具賣掉後，孩子玩什麼？", why:"結果揭曉型，讓人想知道真實情況", hook:"「我本來很擔心，結果他花最多時間玩這個」" },
+        { type:"short", title:"如果可以重來，我不會買的三種玩具", why:"後悔清單型，對準有消費焦慮的媽媽", hook:"「不是貴不好，是孩子根本沒在玩」" },
+      ]
+    },
+    { id:6, topic:"親子活動周報", heat:"🔥🔥 週末爆", desc:"每週分享去哪玩，媽媽群討論度極高", tags:["#親子活動","#週末","#台灣"],
+      refs:[
+        { type:"short", title:"這週帶孩子去了一個沒人推薦的地方，很值", why:"反推薦格式製造好奇心，點擊率高", hook:"「沒有網美照，但孩子玩了三小時不想走」" },
+        { type:"short", title:"台北室內親子活動地圖，下雨天不用愁", why:"實用資訊型，週末前最高儲存率", hook:"「這幾個地方我都帶孩子去過，這是真實評價」" },
+        { type:"short", title:"帶孩子出門最常崩潰的時刻是...（徵求回答）", why:"問答互動型，Threads 演算法最愛推的格式", hook:"「我每次都在這個環節撐不住，你們呢？」" },
+      ]
+    },
+  ],
+};
+
+// active trends = based on current channel
+function getActiveTrends() {
+  return TRENDS_BY_CH[activeCh] || TRENDS_BY_CH.ig;
+}
+
+// all schedule posts in one mutable array (sample + manual merged)
+let schedulePosts = [
+  { id:'s1', day:1, slot:0, title:"螢幕公約分享",    type:"threads", time:"09:00" },
+  { id:'s2', day:2, slot:1, title:"永續便當開箱",    type:"ig",      time:"12:00" },
+  { id:'s3', day:3, slot:2, title:"共學圈日常",      type:"yt",      time:"19:00" },
+  { id:'s4', day:4, slot:0, title:"職場媽媽時間術",  type:"threads", time:"09:30" },
+  { id:'s5', day:5, slot:1, title:"極簡玩具",        type:"ig",      time:"12:00" },
+];
+let schedPostNextId = 1;
+
+// keep SAMPLE_POSTS as alias for weekBar dots
+const SAMPLE_POSTS = schedulePosts;
+
+let selTrend = 0;
+let plats = { ig: true, threads: true, yt: false };
+let weekOffset = 0;
+let generatedPosts = [];
+
+const DAYS = ['日','一','二','三','四','五','六'];
+const SLOTS = ['上午 AM','中午 Noon','下午 PM','晚上 Eve'];
+
+// ── SCHEDULE POST POPOVER ──
+let activePopover = null;
+
+function showPostPopover(e, postId) {
+  e.stopPropagation();
+  closePopover();
+  const post = schedulePosts.find(p=>p.id===postId);
+  if (!post) return;
+
+  const pop = document.createElement('div');
+  pop.id = 'schedPopover';
+  pop.style.cssText = `
+    position:fixed; z-index:500;
+    background:white; border-radius:12px;
+    box-shadow:0 8px 32px rgba(26,26,46,0.18);
+    border:1px solid rgba(26,26,46,0.1);
+    padding:6px; min-width:160px;
+    animation: fadeUp 0.15s ease;
+  `;
+
+  const platLabel = {ig:'📸 Instagram', threads:'🪡 Threads', yt:'🎬 YT Shorts'}[post.type] || post.type;
+  pop.innerHTML = `
+    <div style="padding:8px 12px 6px; border-bottom:1px solid rgba(26,26,46,0.07); margin-bottom:4px;">
+      <div style="font-size:12px;font-weight:700;color:#1A1A2E">${post.title}</div>
+      <div style="font-size:10px;color:rgba(26,26,46,0.4);margin-top:2px">${platLabel} · ${post.time}</div>
+    </div>
+    <button onclick="closePopover()" style="display:block;width:100%;text-align:left;padding:7px 12px;border:none;background:none;font-size:12px;cursor:pointer;border-radius:6px;font-family:inherit;color:#1A1A2E" onmouseover="this.style.background='#f2f0ec'" onmouseout="this.style.background='none'">✏️ 查看 / 編輯</button>
+    <button onclick="deleteSchedPost('${postId}')" style="display:block;width:100%;text-align:left;padding:7px 12px;border:none;background:none;font-size:12px;cursor:pointer;border-radius:6px;font-family:inherit;color:#E1306C" onmouseover="this.style.background='rgba(225,48,108,0.06)'" onmouseout="this.style.background='none'">🗑 刪除此貼文</button>
+  `;
+
+  // position near click
+  document.body.appendChild(pop);
+  const rect = e.currentTarget.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 6;
+  if (left + 180 > window.innerWidth) left = window.innerWidth - 188;
+  if (top + 120 > window.innerHeight) top = rect.top - 126;
+  pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
+  activePopover = pop;
+
+  setTimeout(()=> document.addEventListener('click', closePopover, {once:true}), 10);
+}
+
+function closePopover() {
+  const p = document.getElementById('schedPopover');
+  if (p) p.remove();
+  activePopover = null;
+}
+
+function deleteSchedPost(postId) {
+  schedulePosts = schedulePosts.filter(p => p.id !== postId);
+  closePopover();
+  renderSchedule();
+  toast('🗑 已刪除');
+}
+
+
+// ── INIT ──
+window.onload = () => {
+  const now = new Date();
+  document.getElementById('tdate').textContent = now.toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric',weekday:'long'}) + ' — Today';
+  document.getElementById('lineDate').textContent = now.toLocaleDateString('zh-TW',{month:'long',day:'numeric',weekday:'short'});
+  renderTrends();
+  renderWeekBar();
+  renderSchedule();
+  renderSheet();
+};
+
+// ── TABS ──
+const TAB_TITLES = {
+  today:'🔥 今日熱點 × AI 產文',
+  schedule:'📅 Weekly 排程看板',
+  excel:'📊 內容管理表',
+  analytics:'📈 數據分析',
+  line:'💬 LINE 審核流程'
+};
+function go(tab) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('ttitle').textContent = TAB_TITLES[tab];
+  const tabs=['today','schedule','excel','analytics','line'];
+  document.querySelectorAll('.nav-item')[tabs.indexOf(tab)]?.classList.add('active');
+  if (tab === 'analytics') setTimeout(initChart, 80);
+}
+
+// ── WEEK BAR ──
+function renderWeekBar() {
+  const bar = document.getElementById('weekBar');
+  if (!bar) return;
+  const today = new Date();
+  const dow = today.getDay();
+  bar.innerHTML = DAYS.map((d,i) => {
+    const date = new Date(today); date.setDate(today.getDate() - dow + i);
+    const isToday = i === dow;
+    const dots = SAMPLE_POSTS.filter(p=>p.day===i).slice(0,3);
+    return `<div class="week-day ${isToday?'today':''}">
+      <div class="day-label">${d}</div>
+      <div class="day-num">${date.getDate()}</div>
+      <div class="day-dots">${dots.map(p=>`<div class="day-dot ${p.type}"></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── TRENDS ──
+function renderTrends() {
+  const trends = getActiveTrends();
+  const isYT = activeCh === 'yt';
+
+  // update section header
+  if (isYT) {
+    document.getElementById('trendSectionTitle').textContent = '📡 潤兒 wowow · 本週玩具親子熱門話題';
+    document.getElementById('trendSectionMeta').textContent = 'Tomica · LEGO · DIY · 親子活動 — 點選查看參考影片';
+  } else {
+    document.getElementById('trendSectionTitle').textContent = '📡 本週熱點話題 — 點選主題';
+    document.getElementById('trendSectionMeta').textContent = `AI 即時分析 · ${activeCh==='ig'?'Instagram':'Threads'} 熱門趨勢`;
+  }
+
+  document.getElementById('trendGrid').innerHTML = trends.map((t,i)=>`
+    <div class="trend-card ${i===selTrend?'sel':''}" onclick="selT(${i})">
+      <div class="heat">${t.heat}</div>
+      <div class="num">Topic ${String(i+1).padStart(2,'0')}</div>
+      <div class="topic">${t.topic}</div>
+      <div class="desc">${t.desc}</div>
+      <div class="tags">${t.tags.map(t=>`<span class="trend-tag">${t}</span>`).join('')}</div>
+    </div>`).join('');
+
+  // show ref panel for selected trend
+  renderRefPanel(trends[selTrend]);
+}
+
+function renderRefPanel(trend) {
+  const panel = document.getElementById('refPanel');
+  if (!trend || !trend.refs || trend.refs.length === 0) {
+    panel.innerHTML = `<div class="ref-empty">← 點選左側任一熱點<br>查看參考影片方向</div>`;
+    return;
+  }
+  panel.innerHTML = `
+    <div class="ref-header">
+      <div class="ref-header-topic">💡 ${trend.topic}</div>
+      <div class="ref-header-meta">熱門影片類型參考 · 點「套用」加入排程靈感</div>
+    </div>
+    <div class="ref-videos">
+      ${trend.refs.map((r,i)=>`
+        <div class="ref-video-card">
+          <div class="ref-video-top">
+            <span class="ref-video-type ${r.type}">${r.type==='short'?'Shorts':'長片'}</span>
+            <div class="ref-video-title">${r.title}</div>
+          </div>
+          <div class="ref-video-why">📊 ${r.why}</div>
+          <div class="ref-video-hook">🎣 開頭鉤子：${r.hook}</div>
+          <button class="ref-use-btn" onclick="useRefIdea(${i})">✨ 用這個方向產文</button>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function useRefIdea(refIdx) {
+  const trends = getActiveTrends();
+  const trend = trends[selTrend];
+  const ref = trend?.refs?.[refIdx];
+  if (!ref) return;
+  // switch platform toggles to match current channel
+  if (activeCh === 'yt') {
+    plats = { ig:false, threads:false, yt:true };
+  } else if (activeCh === 'ig') {
+    plats = { ig:true, threads:false, yt:false };
+  } else {
+    plats = { ig:false, threads:true, yt:false };
+  }
+  ['ig','threads','yt'].forEach(p => document.getElementById('tog-'+p)?.classList.toggle('on', plats[p]));
+  toast(`✨ 套用：「${ref.title}」— 產文中...`);
+  setTimeout(generatePost, 300);
+}
+
+function selT(i) {
+  selTrend = i;
+  renderTrends();
+  document.getElementById('results').innerHTML='';
+}
+
+// ── PLATFORMS ──
+function togPlat(p){ plats[p]=!plats[p]; document.getElementById('tog-'+p).classList.toggle('on',plats[p]); }
+
+// ── GENERATE ──
+async function generatePost() {
+  const hasAny = Object.values(plats).some(v=>v);
+  if (!hasAny) { toast('⚠️ 請至少選一個平台'); return; }
+  const trends = getActiveTrends();
+  const t = trends[selTrend];
+  const pList = Object.entries(plats).filter(([,v])=>v).map(([k])=>k);
+
+  document.getElementById('genBtn').disabled = true;
+  document.getElementById('quickGenBtn').disabled = true;
+  showLoad();
+
+  const platNames = { ig:'Instagram', threads:'Threads(脆)', yt:'YouTube Shorts 腳本' };
+  const platList = pList.map(p=>platNames[p]).join('、');
+  const today = new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'long',day:'numeric'});
+  const chName = activeCh === 'yt' ? '潤兒wowow（YouTube 玩具親子頻道）' : 'DONG MA 董娘（IG/Threads 親子共學帳號）';
+
+  const prompt = `你是「${chName}」的社群文案寫手。
+
+【今天日期】${today}
+【今日熱點話題】「${t.topic}」
+【話題說明】${t.desc}
+
+【創作者口吻與風格 — 請嚴格模仿以下兩篇範文的語氣】
+
+範文一（日常崩潰流水帳）：
+「這兩天完整體會到美冴的累🥱
+
+早上匆忙準備早餐
+吾兒賴床錯過爸爸校車
+好不容易叫了起來
+吃早餐刷牙換衣服拖拉到不行
+
+餵食完妹妹副食品和中藥
+背起妹妹抓起哥哥趕公車去
+狼狽的回到家面對杯盤狼藉
+先躺個好一會兒好一會兒
+又要開始鬼打牆的奮戰了
+
+致敬所有家庭主婦🫡」
+
+範文二（外部資訊切入自身，結尾留白讓人笑）：
+「今天看到一篇報導
+O型平均年齡是87歲
+A型平均年齡是62歲
+
+我是A型，溫尢是O型
+我跟溫尢差了10歲
+
+一直以為我會是被留下來的人
+現在看來我可能是先走的那個人」
+
+【口吻特徵，請嚴格遵守】
+- 短句分行，像在喘氣，不堆砌文字
+- 白話流水帳，不加工，直接說
+- 不說教、不正能量喊話、不升華主題
+- 結尾點到為止，讓人自己笑出來或點頭
+- emoji 極度克制，只在對的地方用一個
+- threads 不用 hashtag，IG 才加 hashtag
+- 語氣像「像肖郎的董娘」——有點自嘲、有點幽默、真實不裝
+
+【任務】請為以下平台產出貼文，回傳純JSON（無markdown）：
+平台：${platList}
+頻道：${chName}
+
+格式：
+{"posts":[{"platform":"平台英文名(ig/threads/yt)","name":"顯示名稱","title":"主題(10字內)","content":"貼文內容","hashtags":["tag1","tag2"],"tip":"這篇的口吻亮點(20字內)","script":"（只有yt才填）60秒分鏡腳本含口白"}]}
+
+各平台調整：
+- threads: 150字內，短句分行，口語，結尾留白，不加hashtag
+- ig: 200字內，短句分行，結尾加2-3個hashtag，加一個emoji
+- yt: script欄位填【0-5秒鉤子】【6-40秒主內容】【41-55秒tips】【56-60秒CTA】`;
+
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:1500,
+        messages:[{role:"user",content:prompt}]
+      })
+    });
+    const d = await r.json();
+    const txt = d.content.map(x=>x.text||'').join('');
+    const clean = txt.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    hideLoad();
+    renderResults(parsed.posts, t);
+    parsed.posts.forEach(p=>{
+      allPosts.push({id: nextId++, date:todayStr(), platform:p.platform, name:p.name||p.platform, videoType: p.platform==='yt'?'短':'圖文', topic:t.topic, goal:'—', content:p.content, thumb:'', link:'', followers:0, status:'draft'});
+    });
+    renderExcel();
+    toast('✅ 貼文生成完成！可直接點擊文字修改');
+  } catch(e) {
+    hideLoad();
+    toast('❌ 生成失敗，請再試一次');
+    console.error(e);
+  }
+  document.getElementById('genBtn').disabled=false;
+  document.getElementById('quickGenBtn').disabled=false;
+}
+
+function todayStr(){ const d=new Date(); return `${d.getMonth()+1}/${d.getDate()}`; }
+
+function renderResults(posts, trend) {
+  const icons = {ig:'📸',threads:'🪡',yt:'🎬'};
+  const colors = {ig:'ig',threads:'threads',yt:'yt'};
+  document.getElementById('results').innerHTML = posts.map((p,i)=>`
+    <div class="result-card">
+      <div class="rc-header">
+        <div class="rc-platform">
+          <div class="platform-icon ${colors[p.platform]||'threads'}">${icons[p.platform]||'📝'}</div>
+          <div>
+            <div class="rc-pname">${p.name||p.platform} — ${p.title}</div>
+          </div>
+        </div>
+        ${p.tip?`<div class="rc-tip">💡 ${p.tip}</div>`:''}
+      </div>
+      <div class="rc-body">
+        <div class="rc-content" contenteditable="true" id="rc${i}">${p.content}</div>
+        ${p.hashtags?.length?`<div class="rc-hashtags">${p.hashtags.map(h=>`<span class="rc-hashtag">#${h.replace('#','')}</span>`).join('')}</div>`:''}
+        ${p.script?`<div class="rc-script"><div class="rc-script-label">🎬 YT Shorts 腳本</div><div class="rc-script-content">${p.script}</div></div>`:''}
+      </div>
+      <div class="rc-footer">
+        <button class="btn btn-moss" onclick="schedPost(${i},'${p.platform}','${trend.topic}')">📅 排程</button>
+        <button class="btn btn-ghost" onclick="copyRC(${i})">複製</button>
+        <button class="btn btn-line" onclick="sendToLine(${i})">LINE 審核</button>
+        <button class="btn btn-amber" onclick="toast('♻️ 重新生成中...')">Regenerate</button>
+      </div>
+    </div>`).join('');
+}
+
+function copyRC(i) {
+  const el = document.getElementById('rc'+i);
+  navigator.clipboard.writeText(el.innerText).then(()=>toast('📋 已複製貼文'));
+}
+function schedPost(i,p,topic) { toast(`📅 已排入排程：${p} — ${topic}`); renderSchedule(); }
+
+// ── LINE 真實推送 ──
+const LINE_TOKEN = '8eGUhuVHcCjY2F1WlC4O2MXrCWm9o3X/UmAPK5RXeUWSShKPYGxvrpLSjrbKA5ppouH5AnlLeA78DRZcqAwg10m/4BEBFo2KlPA6PzqW64IwdfIzhKqgvt/ewDF0UzDP0AiM4yGjFJUiKFxXX+D9DAdB04t89/1O/w1cDnyilFU=';
+const LINE_USER  = 'U2da1c791c66a02d4dd9d04616b7a34f0';
+
+async function sendToLine(i) {
+  const el = document.getElementById('rc'+i);
+  const content = el?.innerText || '';
+  const preview = content.substring(0, 200);
+
+  toast('📤 傳送到 LINE 中...');
+
+  try {
+    const res = await fetch('https://api.line.me/v2/bot/message/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LINE_TOKEN}`
+      },
+      body: JSON.stringify({
+        to: LINE_USER,
+        messages: [{
+          type: 'text',
+          text: `📝 貼文草稿待審核\n\n${preview}${content.length > 200 ? '...' : ''}\n\n✅ 回覆「發出」自動發文\n✏️ 回覆「修改＋你的意見」重新生成`
+        }]
+      })
+    });
+
+    if (res.ok) {
+      toast('✅ 已推送到你的 LINE！請打開手機確認');
+      go('line');
+      setTimeout(()=>addLineMsg('bot',`📨 草稿已送到你的 LINE！\n\n${preview.substring(0,80)}...\n\n請在手機回覆「✅ 發出」或「✏️ 修改」`),400);
+    } else {
+      const err = await res.json();
+      toast(`❌ 推送失敗：${err.message || res.status}`);
+      console.error(err);
+    }
+  } catch(e) {
+    toast('❌ 網路錯誤，請稍後再試');
+    console.error(e);
+  }
+}
+
+// ── SCHEDULE ──
+let manualPosts = []; // { day(0-6), slot(0-3), title, type, time, content, date, status }
+let modalPlatSel = 'threads';
+let pendingCell = null; // {day, slot}
+
+function openModal(day, slot) {
+  pendingCell = {day, slot};
+  // Pre-fill date to match the visible week day
+  const today = new Date();
+  const dow = today.getDay();
+  const startDay = new Date(today);
+  startDay.setDate(today.getDate() - dow + weekOffset * 7);
+  const targetDate = new Date(startDay);
+  targetDate.setDate(startDay.getDate() + day);
+  document.getElementById('m-date').value = targetDate.toISOString().split('T')[0];
+
+  // Reset time based on slot
+  const slotTimes = ['09:00','12:00','18:00','20:00'];
+  document.getElementById('m-time').value = slotTimes[slot] || '20:00';
+
+  document.getElementById('m-topic').value = '';
+  document.getElementById('m-content').value = '';
+  document.getElementById('m-status').value = 'scheduled';
+  document.getElementById('modalBackdrop').classList.add('on');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modalBackdrop')) {
+    document.getElementById('modalBackdrop').classList.remove('on');
+  }
+}
+
+function toggleModalPlat(p) {
+  modalPlatSel = p;
+  ['threads','ig','yt'].forEach(x => {
+    const btn = document.getElementById('mp-'+x);
+    btn.classList.toggle('sel', x === p);
+  });
+}
+
+function savePost() {
+  const topic = document.getElementById('m-topic').value.trim();
+  const content = document.getElementById('m-content').value.trim();
+  const time = document.getElementById('m-time').value || '20:00';
+  const status = document.getElementById('m-status').value;
+  const dateVal = document.getElementById('m-date').value;
+
+  if (!topic) { toast('⚠️ 請填入貼文主題'); return; }
+
+  const dateObj = dateVal ? new Date(dateVal) : new Date();
+  const dateStr = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+  const platNames = {ig:'Instagram', threads:'Threads', yt:'YT Shorts'};
+
+  // Add to schedulePosts for schedule board
+  schedulePosts.push({
+    id: 'm' + (schedPostNextId++),
+    day: pendingCell.day,
+    slot: pendingCell.slot,
+    title: topic,
+    type: modalPlatSel,
+    time: time
+  });
+
+  // Add to allPosts for spreadsheet
+  allPosts.push({
+    id: nextId++,
+    date: dateStr,
+    platform: modalPlatSel,
+    name: platNames[modalPlatSel],
+    videoType: modalPlatSel === 'yt' ? '短' : '圖文',
+    topic: topic,
+    goal: '—',
+    content: content,
+    thumb: '',
+    link: '',
+    followers: 0,
+    status: status,
+  });
+
+  document.getElementById('modalBackdrop').classList.remove('on');
+  renderSchedule();
+  renderExcel();
+  toast(`✅ 已新增「${topic}」到排程！`);
+}
+
+function renderSchedule() {
+  const today = new Date();
+  const dow = today.getDay();
+  const startDay = new Date(today);
+  startDay.setDate(today.getDate() - dow + weekOffset * 7);
+
+  const end = new Date(startDay); end.setDate(startDay.getDate()+6);
+  document.getElementById('weekLabel').textContent =
+    `${startDay.getMonth()+1}/${startDay.getDate()} — ${end.getMonth()+1}/${end.getDate()}`;
+
+  let html = `<div class="sg-head" style="background:var(--ink2)"></div>`;
+  for (let d=0;d<7;d++) {
+    const date = new Date(startDay); date.setDate(startDay.getDate()+d);
+    const isToday = weekOffset===0 && d===dow;
+    html += `<div class="sg-head ${isToday?'today':''}">
+      <span class="dnum">${date.getDate()}</span>
+      <span class="dname">${DAYS[d]}</span>
+    </div>`;
+  }
+
+  SLOTS.forEach((slot,si)=>{
+    html += `<div class="sg-time">${slot}</div>`;
+    for (let d=0;d<7;d++) {
+      const cellPosts = schedulePosts.filter(p=>p.day===d&&p.slot===si);
+      html += `<div class="sg-cell" onclick="openModal(${d},${si})">
+        ${cellPosts.map(p=>`<div class="sg-post ${p.type}" onclick="showPostPopover(event,'${p.id}')">
+          <div class="pt">${p.title}</div>
+          <div class="ptime">${p.time}</div>
+        </div>`).join('')}
+        <button class="sg-add" onclick="event.stopPropagation();openModal(${d},${si})">+</button>
+      </div>`;
+    }
+  });
+  document.getElementById('schedGrid').innerHTML = html;
+}
+function shiftWeek(dir){ weekOffset+=dir; renderSchedule(); }
+
+// ── CHANNELS & SPREADSHEET ──
+const CHANNELS = {
+  yt:      { name:'潤兒 wowow', sub:'YouTube', color:'#FF0000',
+             rows:['影音類型','主題','目標','內容','縮圖連結','上線連結','追蹤數','狀態'] },
+  ig:      { name:'DONG MA 董娘', sub:'Instagram', color:'#E1306C',
+             rows:['貼文類型','主題','目標','內容','圖片連結','上線連結','追蹤數','狀態'] },
+  threads: { name:'DONG MA 董娘', sub:'脆 Threads', color:'#000000',
+             rows:['貼文類型','主題','目標','內容','上線連結','追蹤數','狀態'] },
+};
+
+let channelData = {
+  yt: [
+    { id:1, date:'3/13', cells:{'影音類型':'短','主題':'車子品牌挑戰','目標':'續看率','內容':'','縮圖連結':'n/a','上線連結':'https://youtube.com/sho...','追蹤數':'72','狀態':'published'} },
+    { id:2, date:'3/15', cells:{'影音類型':'長','主題':'警察抓小偷','目標':'新客群','內容':'','縮圖連結':'https://canva.com/...','上線連結':'https://youtu.be/kxz...','追蹤數':'72','狀態':'published'} },
+    { id:3, date:'3/20', cells:{'影音類型':'短','主題':'機器人 or 細菌人','目標':'曝光','內容':'','縮圖連結':'','上線連結':'','追蹤數':'72','狀態':'scheduled'} },
+    { id:4, date:'3/22', cells:{'影音類型':'短','主題':'樂高 Shorts','目標':'新客群','內容':'','縮圖連結':'','上線連結':'','追蹤數':'74','狀態':'scheduled'} },
+  ],
+  ig: [
+    { id:1, date:'3/25', cells:{'貼文類型':'圖文','主題':'','目標':'','內容':'','圖片連結':'','上線連結':'','追蹤數':'','狀態':'draft'} },
+  ],
+  threads: [
+    { id:1, date:'3/25', cells:{'貼文類型':'文字','主題':'老公用育兒方式教我曬衣服','目標':'共鳴','內容':'老公在教兒子曬衣服\n「襪子一雙，夾一個夾子」...','上線連結':'','追蹤數':'','狀態':'draft'} },
+  ],
+};
+let colNextId = { yt:5, ig:2, threads:2 };
+let activeCh = 'yt';
+
+const STATUS_CYCLE = {draft:'scheduled',scheduled:'approved',approved:'published',published:'draft'};
+const STATUS_LABEL = {draft:'草稿',scheduled:'已排程',approved:'已審核',published:'已發布'};
+const STATUS_COLOR = {draft:'rgba(26,26,46,0.1)',scheduled:'rgba(74,124,89,0.15)',approved:'rgba(74,124,89,0.28)',published:'rgba(212,120,58,0.18)'};
+const STATUS_TEXT  = {draft:'rgba(26,26,46,0.45)',scheduled:'#3a6647',approved:'#2a5036',published:'#8a4218'};
+
+function switchChannel(ch) {
+  activeCh = ch;
+  selTrend = 0;
+  document.querySelectorAll('.ch-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('ch-'+ch).classList.add('active');
+  // update platform toggles to match channel
+  if (ch === 'yt') {
+    plats = { ig:false, threads:false, yt:true };
+  } else if (ch === 'ig') {
+    plats = { ig:true, threads:false, yt:false };
+  } else {
+    plats = { ig:false, threads:true, yt:false };
+  }
+  ['ig','threads','yt'].forEach(p => document.getElementById('tog-'+p)?.classList.toggle('on', plats[p]));
+  renderTrends();
+  renderSheet();
+}
+
+function renderSheet() {
+  const ch = CHANNELS[activeCh];
+  const cols = channelData[activeCh];
+  document.getElementById('postCount').textContent = cols.length;
+  document.getElementById('activeChLabel').textContent = `${ch.name} · ${ch.sub}`;
+
+  let html = '';
+  // Date header row
+  html += `<tr>
+    <td class="row-label" style="background:var(--ink)">日期</td>
+    ${cols.map(col=>{
+      const filled = col.cells['主題'];
+      return `<td class="date-header${filled?' has-content':''}">
+        <div class="dh-date">${col.date}</div>
+      </td>`;
+    }).join('')}
+    <td rowspan="${ch.rows.length+1}" class="add-col-btn" onclick="addDateCol()" title="新增日期">+</td>
+  </tr>`;
+
+  // Data rows
+  ch.rows.forEach(rowKey=>{
+    const isStatus = rowKey==='狀態';
+    const isLink = rowKey.includes('連結');
+    const isNum = rowKey==='追蹤數';
+    const isBold = rowKey==='主題';
+    html += `<tr>
+      <td class="row-label">${rowKey}</td>
+      ${cols.map(col=>{
+        const val = col.cells[rowKey]||'';
+        const cid = col.id;
+        const hi = col.cells['主題']?' highlighted':'';
+        if(isStatus){
+          const s=val||'draft';
+          return `<td class="data-cell${hi}"><span class="sheet-status" style="background:${STATUS_COLOR[s]};color:${STATUS_TEXT[s]}" onclick="cycleColStatus('${activeCh}',${cid})">${STATUS_LABEL[s]}</span></td>`;
+        }
+        const cls='sheet-sc'+(val?'':' empty')+(isBold?' bold':'')+(isLink?' link-val':'')+(isNum?' num-val':'');
+        return `<td class="data-cell${hi}"><span class="${cls}" onclick="editSheetCell('${activeCh}',${cid},'${rowKey}',this)">${val||(rowKey==='—'?'—':'點擊填入')}</span></td>`;
+      }).join('')}
+    </tr>`;
+  });
+
+  document.getElementById('sheetBody').innerHTML = html;
+}
+
+function editSheetCell(ch, colId, rowKey, el) {
+  if(el.querySelector('input,textarea')) return;
+  const col = channelData[ch].find(c=>c.id===colId);
+  if(!col) return;
+  const val = col.cells[rowKey]||'';
+  const isLong = rowKey==='內容';
+  const isNum = rowKey==='追蹤數';
+  let inp;
+  if(isLong){
+    inp=document.createElement('textarea');
+    inp.className='sheet-input'; inp.style.minHeight='80px'; inp.value=val;
+  } else {
+    inp=document.createElement('input');
+    inp.className='sheet-input'; inp.type=isNum?'number':'text'; inp.value=val;
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key==='Tab')inp.blur();});
+  }
+  inp.addEventListener('blur',()=>{ col.cells[rowKey]=inp.value; renderSheet(); toast('✅ 已儲存'); });
+  el.innerHTML=''; el.appendChild(inp); inp.focus();
+}
+
+function cycleColStatus(ch, colId) {
+  const col = channelData[ch].find(c=>c.id===colId);
+  if(!col) return;
+  const cur = col.cells['狀態']||'draft';
+  col.cells['狀態'] = STATUS_CYCLE[cur];
+  renderSheet(); toast(`🔄 ${STATUS_LABEL[col.cells['狀態']]}`);
+}
+
+function addDateCol() {
+  const ch = activeCh;
+  const rows = CHANNELS[ch].rows;
+  const empty={};
+  rows.forEach(r=>empty[r]='');
+  empty['狀態']='draft';
+  const cols = channelData[ch];
+  // suggest next date
+  const lastDate = cols.length ? cols[cols.length-1].date : '3/25';
+  const parts = lastDate.split('/');
+  const nextDay = parseInt(parts[1]||25)+1;
+  empty._suggestDate = `${parts[0]}/${nextDay}`;
+  cols.push({id:colNextId[ch]++, date:empty._suggestDate, cells:empty});
+  renderSheet();
+  toast('➕ 新增日期欄');
+  setTimeout(()=>{ const w=document.querySelector('.sheet-wrap'); if(w) w.scrollLeft=99999; },80);
+}
+
+function exportExcel() {
+  toast('📊 產出 Excel 中...');
+  setTimeout(()=>toast('✅ content-schedule.xlsx 下載完成'),1500);
+}
+
+// allPosts 和 nextId 供 generatePost 使用（寫入 channelData）
+let allPosts = [];
+let nextId = 100;
+
+function renderExcel(){ renderSheet(); }
+
+
+// ── ANALYTICS ──
+const CONNECT_GUIDES = {
+  yt: {
+    title: '🔴 串接 YouTube Analytics API — 步驟教學',
+    color: '#FF0000',
+    steps: [
+      { num:'1', title:'前往 Google Cloud Console 開啟專案',
+        desc:'登入 Google Cloud Console，建立新專案（例如命名「潤兒wowow Analytics」）。',
+        link:'https://console.cloud.google.com', linkText:'開啟 Google Cloud Console' },
+      { num:'2', title:'啟用 YouTube Analytics API',
+        desc:'在左側選單 → APIs & Services → Library，搜尋「YouTube Analytics API」和「YouTube Data API v3」，兩個都要啟用。' },
+      { num:'3', title:'建立 OAuth 2.0 憑證',
+        desc:'APIs & Services → Credentials → Create Credentials → OAuth client ID。選擇「Web application」，在 Authorized redirect URIs 填入你的工具網址。' },
+      { num:'4', title:'取得頻道 ID',
+        desc:'進入 YouTube Studio → 設定 → 頻道 → 進階設定，複製「頻道 ID」（格式為 UC 開頭的字串）。',
+        code:'頻道 ID 格式：UCxxxxxxxxxxxxxxxxxxxxxxxx' },
+      { num:'5', title:'在工具中填入 API Key',
+        desc:'取得 API Key 後，點下方的「填入 API Key」按鈕，系統就會開始自動抓取你的訂閱數和影片數據。',
+        code:'GET https://www.googleapis.com/youtube/v3/channels\n?part=statistics&id={CHANNEL_ID}&key={API_KEY}' },
+    ]
+  },
+  ig: {
+    title: '🌸 串接 Instagram Graph API — 步驟教學',
+    color: '#E1306C',
+    steps: [
+      { num:'1', title:'確認帳號是「創作者」或「商業」帳號',
+        desc:'你已經是創作者帳號 ✅。確認你的 IG 帳號已連結到 Facebook 粉絲專頁（這是 Meta API 的必要條件）。' },
+      { num:'2', title:'前往 Meta for Developers 建立 App',
+        desc:'登入 Meta for Developers → My Apps → Create App。選擇「Consumer」類型，填入 App 名稱。',
+        link:'https://developers.facebook.com', linkText:'開啟 Meta for Developers' },
+      { num:'3', title:'新增 Instagram Graph API 產品',
+        desc:'在 App 設定頁面 → Add a Product → Instagram Graph API。接著在左側選單 → Instagram → Basic Display。' },
+      { num:'4', title:'取得 Access Token',
+        desc:'在 Instagram Basic Display → User Token Generator，點「Generate Token」，登入你的董娘帳號，授權後複製 Token。',
+        code:'Access Token 範例：\nIGQVJW...(很長的字串)' },
+      { num:'5', title:'可抓取的數據',
+        desc:'串接後可以自動獲得：帳號追蹤數、每篇貼文的觸及數、按讚數、留言數、收藏數、互動率。',
+        code:'GET https://graph.instagram.com/me/media\n?fields=like_count,comments_count,reach\n&access_token={TOKEN}' },
+    ]
+  },
+  threads: {
+    title: '🪡 串接 Threads API — 步驟教學',
+    color: '#111111',
+    steps: [
+      { num:'1', title:'Threads API 現況說明',
+        desc:'Threads API 於 2024 年開放，目前功能較基本。可以抓取貼文的按讚數、留言數、轉發數、引用數，但深度分析（觸及數等）還未開放。' },
+      { num:'2', title:'前往 Meta for Developers 申請存取',
+        desc:'與 IG 共用同一個 Meta App。在 App 頁面 → Add a Product → Threads API，然後提交 App Review 申請存取（審核約 5-7 個工作天）。',
+        link:'https://developers.facebook.com/docs/threads', linkText:'Threads API 官方文件' },
+      { num:'3', title:'取得 Threads Access Token',
+        desc:'審核通過後，在 Threads → User Token Generator 取得 Token。注意：Token 有效期限為 60 天，需定期更新。',
+        code:'Authorization URL:\nhttps://threads.net/oauth/authorize\n?client_id={APP_ID}&redirect_uri={URI}\n&scope=threads_basic,threads_content_publish' },
+      { num:'4', title:'目前可抓的數據',
+        desc:'貼文按讚數、留言數、轉發數、引用數、帳號追蹤人數。觸及數和曝光數預計 2025 下半年開放。',
+        code:'GET https://graph.threads.net/me/threads\n?fields=like_count,replies_count,repost_count\n&access_token={TOKEN}' },
+      { num:'5', title:'建議替代方案（現在就能用）',
+        desc:'在等待 API 審核期間，建議使用「手動更新數據」功能，每週花 3 分鐘把 Threads 後台的數字填進來，先建立走勢記錄。' },
+    ]
+  }
+};
+
+// follower history data (sample + manually added)
+let followerHistory = {
+  yt:      { labels:['3/1','3/8','3/15','3/20','3/22'], data:[68,70,71,72,74] },
+  ig:      { labels:['3/1','3/8','3/15','3/20','3/22'], data:[0,0,0,0,0] },
+  threads: { labels:['3/1','3/8','3/15','3/20','3/22'], data:[0,0,0,0,0] },
+};
+
+let activeChartPlatform = 'yt';
+let followerChartObj = null;
+
+function initChart() {
+  const ctx = document.getElementById('followerChart');
+  if (!ctx) return;
+  if (followerChartObj) { followerChartObj.destroy(); }
+  const d = followerHistory[activeChartPlatform];
+  const colors = { yt:'#FF0000', ig:'#E1306C', threads:'#333' };
+  const col = colors[activeChartPlatform];
+
+  followerChartObj = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: '追蹤數',
+        data: d.data,
+        borderColor: col,
+        backgroundColor: col + '18',
+        borderWidth: 2.5,
+        pointBackgroundColor: col,
+        pointRadius: 4,
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { font: { size:10 } } },
+        x: { grid: { display: false }, ticks: { font: { size:10 } } }
+      }
+    }
+  });
+}
+
+function switchChartPlatform(ch, btn) {
+  activeChartPlatform = ch;
+  document.querySelectorAll('.an-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  initChart();
+}
+
+function updateManual(platform, metric, val) {
+  const num = parseInt(val) || 0;
+  const map = {
+    yt: { subs: 'yt-subs', views: 'yt-views', avd: 'yt-avd', videos: 'yt-videos' },
+    ig: { followers: 'ig-followers', reach: 'ig-reach', likes: 'ig-likes', saves: 'ig-saves' },
+    threads: { followers: 'th-followers', replies: 'th-replies', reposts: 'th-reposts', likes: 'th-likes' },
+  };
+  const elId = map[platform]?.[metric];
+  if (elId) document.getElementById(elId).textContent = num.toLocaleString();
+}
+
+function saveManualData() {
+  // push today's follower counts into history
+  const today = `${new Date().getMonth()+1}/${new Date().getDate()}`;
+  ['yt','ig','threads'].forEach(ch => {
+    const inputMap = { yt:'input-yt-subs', ig:'input-ig-followers', threads:'input-th-followers' };
+    const val = parseInt(document.getElementById(inputMap[ch])?.value) || 0;
+    if (val > 0) {
+      const h = followerHistory[ch];
+      // avoid duplicate dates
+      if (h.labels[h.labels.length-1] !== today) {
+        h.labels.push(today); h.data.push(val);
+      } else {
+        h.data[h.data.length-1] = val;
+      }
+    }
+  });
+  initChart();
+  toast('💾 本週數據已儲存，走勢圖已更新！');
+}
+
+function showConnect(platform) {
+  const guide = CONNECT_GUIDES[platform];
+  if (!guide) return;
+  const sec = document.getElementById('connectSection');
+  sec.style.display = 'block';
+  document.getElementById('connectTitle').textContent = guide.title;
+  document.getElementById('connectContent').innerHTML = `
+    <div class="an-steps">
+      ${guide.steps.map((s,i) => `
+        <div class="an-step">
+          <div class="an-step-left">
+            <div class="an-step-num" style="background:${guide.color}">${s.num}</div>
+            ${i < guide.steps.length-1 ? '<div class="an-step-line"></div>' : ''}
+          </div>
+          <div class="an-step-right">
+            <div class="an-step-title">${s.title}</div>
+            <div class="an-step-desc">${s.desc}</div>
+            ${s.code ? `<div class="an-step-code">${s.code}</div>` : ''}
+            ${s.link ? `<a class="an-step-link" href="${s.link}" target="_blank">🔗 ${s.linkText}</a>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>`;
+  sec.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+
+function lineReply() {
+  const inp = document.getElementById('lineInput');
+  const msg = inp.value.trim(); if(!msg) return;
+  addLineMsg('me', msg); inp.value='';
+  setTimeout(()=>{
+    if(msg.includes('✅')||msg.includes('發出')||msg.toLowerCase().includes('ok')) {
+      addLineMsg('bot','✅ 收到！已排程今日 12:00 自動發布到 IG + Threads！\n發布後我會回傳連結給你 📲');
+    } else if(msg.includes('查看')) {
+      addLineMsg('bot','📋 本週排程：\n· 今天 Threads 「螢幕公約」\n· 明天 IG 「永續便當」\n· 後天 YT Shorts 腳本\n\n哪篇要先看全文？');
+    } else if(msg.includes('修改')||msg.includes('✏️')) {
+      addLineMsg('bot','好的！請直接說你想怎麼改，例如：\n・語氣更輕鬆\n・加入我的親身故事\n・縮短到100字\n\nAI 馬上重新生成 ✨');
+    } else {
+      addLineMsg('bot',`收到你的想法：「${msg}」\n\nAI 正在根據你的意見重新生成，30秒內完成 ⚡`);
+    }
+  }, 700);
+}
+
+function addLineMsg(type, text) {
+  const box = document.getElementById('lineMsgs');
+  const now = new Date();
+  const t = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  box.innerHTML += `<div class="lm ${type==='bot'?'bot':'me'}">
+    <div class="lm-bubble">${text.replace(/\n/g,'<br>')}</div>
+    <div class="lm-time">${t}</div>
+  </div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── LOADING ──
+function showLoad() {
+  document.getElementById('loading').classList.add('on');
+  ['ls1','ls2','ls3','ls4'].forEach((id,i)=>{
+    setTimeout(()=>document.getElementById(id).classList.add('on'), i*500);
+  });
+}
+function hideLoad() {
+  document.getElementById('loading').classList.remove('on');
+  ['ls1','ls2','ls3','ls4'].forEach(id=>document.getElementById(id).classList.remove('on'));
+}
+
+// ── TOAST ──
+function toast(msg) {
+  const el = document.getElementById('toastEl');
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('on'),2800);
+}
+</script>
+</body>
+</html>
